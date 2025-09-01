@@ -63,7 +63,7 @@ public class AuthController {
                     .collect(Collectors.toSet());
 
             final String jwt = jwtUtil.generateToken(userDetails.getUsername(), roles);
-
+System.out.println(jwt);
             return ResponseEntity.ok(new AuthenticationResponse(jwt));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(401).body("Username o password non validi");

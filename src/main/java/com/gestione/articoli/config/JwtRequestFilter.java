@@ -20,6 +20,7 @@ import com.gestione.articoli.model.Role;
 import com.gestione.articoli.service.imp.CustomUserDetailsService;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -56,9 +57,10 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 Set<Role> roles = jwtUtil.extractRoles(jwt);
 
                 // Converte i ruoli in una lista di SimpleGrantedAuthority per Spring Security
-                var authorities = roles.stream()
-                        .map(role -> new SimpleGrantedAuthority(role.name()))
-                        .collect(Collectors.toList());
+                List<SimpleGrantedAuthority> authorities = roles.stream()
+                		  .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                		  .collect(Collectors.toList());
+
 
                 // Crea il token di autenticazione con i ruoli
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
