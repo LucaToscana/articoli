@@ -1,6 +1,8 @@
 package com.gestione.articoli.service.imp;
 
 import com.gestione.articoli.dto.ArticoloDto;
+import com.gestione.articoli.dto.ArticoloHierarchyDto;
+import com.gestione.articoli.mapper.ArticoloHierarchyMapper;
 import com.gestione.articoli.mapper.ArticoloMapper;
 import com.gestione.articoli.mapper.AziendaMapper;
 import com.gestione.articoli.model.Articolo;
@@ -157,6 +159,13 @@ public class ArticoloServiceImpl implements ArticoloService {
 	public List<ArticoloDto> findAllNoPagination() {
 		return articoloRepository.findAllByOrderByDataCreazioneDesc().stream().map(ArticoloMapper::toDto)
 				.collect(Collectors.toList());
+	}
+	@Override
+	@Transactional(readOnly = true)
+	public ArticoloHierarchyDto getGerarchia(Long id) {
+		Articolo articolo = articoloRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Articolo non trovato: " + id));
+		return ArticoloHierarchyMapper.toHierarchyDto(articolo, new HashSet<>());
 	}
 
 	// Utility per unire due set

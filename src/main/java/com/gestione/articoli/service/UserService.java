@@ -1,6 +1,7 @@
 package com.gestione.articoli.service;
 
 import com.gestione.articoli.dto.UserDto;
+import com.gestione.articoli.model.User;
 
 import java.util.List;
 
@@ -19,4 +20,6 @@ public interface UserService {
 	Object findByUsername(String username);
 
 	UserDto save(UserDto build);
+
+	User getAuthenticatedUser();
 }

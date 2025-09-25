@@ -1,17 +1,45 @@
 package com.gestione.articoli.service;
 
+import com.gestione.articoli.dto.StartWorkDto;
 import com.gestione.articoli.dto.TotalWorkTimeDto;
 import com.gestione.articoli.dto.WorkDto;
+import com.gestione.articoli.model.WorkStatus;
+
 import java.util.List;
 
 public interface WorkService {
+
+    /* ========= CREATE ========= */
     WorkDto createWork(WorkDto dto);
-    WorkDto updateWork(Long id, WorkDto dto);
-    void deleteWork(Long id);
+    WorkDto startWork(StartWorkDto dto);
+
+    /* ========= READ ========= */
     WorkDto getWorkById(Long id);
     List<WorkDto> getAllWorks();
     List<WorkDto> getWorksByOrderArticle(Long orderArticleId);
+    List<WorkDto> getWorksByOrderArticleId(Long orderArticleId);
+    List<WorkDto> getWorksByOrderId(Long orderId);
+	List<WorkDto> getInProgressManualByOrder(Long id);
+    List<WorkDto> getInProgressAvailabilityWorks();
+	List<WorkDto> getAvailabilityWorksByOrder(Long orderId);
+
+    List<WorkDto> getInProgressManualWorks();
+    List<WorkDto> getInProgressLottoWorks();
+	List<WorkDto> getLottoWorks();
+
     long calculateTotalWorkSeconds(Long orderArticleId);
-	TotalWorkTimeDto getTotalWorkTimeDto(Long orderArticleId);
+    TotalWorkTimeDto getTotalWorkTimeDto(Long orderArticleId);
+
+    /* ========= UPDATE ========= */
+    WorkDto updateWork(Long id, WorkDto dto);
+    /* ========= TRANSITIONS / ACTIONS ========= */
+    WorkDto closeWork(Long id, WorkStatus status);
+    WorkDto transitionWork(Long workId, WorkStatus newStatus);
+    /* ========= DELETE ========= */
+    void deleteWork(Long id);
+	WorkDto updateLottoWork(Long id, WorkDto dto);
+	void deleteLottoWork(Long id);
+	List<WorkDto> getLottoWorksByOrder(Long id);
 
 }
+

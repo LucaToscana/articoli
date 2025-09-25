@@ -20,8 +20,11 @@ public class OrdineArticoloMapper {
                 .articoloId(entity.getArticolo() != null ? entity.getArticolo().getId() : null)
                 .quantita(entity.getQuantita())
                 .articoloCodice(entity.getArticolo() != null ? entity.getArticolo().getCodice() : null)
+                .articoloCodiceComponente(entity.getArticolo() != null ? entity.getArticolo().getCodiceComponente() : null)
                 .articoloDescrizione(entity.getArticolo() != null ? entity.getArticolo().getDescrizione() : null)
                 .articoloImmagineBase64(immagine)
+                .aziendaId(entity.getArticolo() != null && entity.getArticolo().getAzienda() != null
+                        ? entity.getArticolo().getAzienda().getId() : null)
                 .aziendaNome(entity.getArticolo() != null && entity.getArticolo().getAzienda() != null
                         ? entity.getArticolo().getAzienda().getNome() : null)
                 .build();

@@ -9,19 +9,43 @@ import java.util.Set;
 
 @Entity
 @Table(name = "ordini")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = "articoli") 
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) 
 public class Ordine {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
+    
+    @Builder.Default
+    private LocalDateTime dataOrdine =  LocalDateTime.now();;
+    
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean hasDdt = false;   
+    
+    @Builder.Default
+    private String nomeDocumento ="";  
 
-    private LocalDateTime dataOrdine;
-
+    
+    @Enumerated(EnumType.STRING) 
+    @Column(nullable = false)
+    @Builder.Default
+    private WorkStatus workStatus = WorkStatus.SCHEDULED;
+    
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "azienda_id", nullable = false)
+    private Azienda azienda;
+    
     @OneToMany(mappedBy = "ordine", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<OrdineArticolo> articoli = new HashSet<>();
 
     @PrePersist

@@ -21,11 +21,9 @@ public class ArticoloDto {
 
     private LocalDateTime dataCreazione;
     private BigDecimal prezzoIdeale;
-    private boolean conDdt;
     private boolean attivoPerProduzione;
     private AziendaDto azienda;
 
-    // 🔹 nuovi campi per relazioni molti-a-molti
     private Set<Long> articoliPadriIds;
     private Set<Long> articoliFigliIds;
 
@@ -44,18 +42,17 @@ public class ArticoloDto {
     // Costruttore comodo con info principali
     public ArticoloDto(String codice, String descrizione,
                        BigDecimal prezzoIdeale,
-                       boolean conDdt, boolean attivoPerProduzione) {
+                        boolean attivoPerProduzione) {
         this.codice = codice;
         this.descrizione = descrizione;
         this.prezzoIdeale = prezzoIdeale != null ? prezzoIdeale : BigDecimal.ZERO;
-        this.conDdt = conDdt;
         this.attivoPerProduzione = attivoPerProduzione;
     }
 
     // Costruttore completo senza immagine (es. query leggere)
     public ArticoloDto(Long id, String codice, String codiceComponente,
                        String descrizione, LocalDateTime dataCreazione,
-                       BigDecimal prezzoIdeale, boolean conDdt, boolean attivoPerProduzione,
+                       BigDecimal prezzoIdeale,  boolean attivoPerProduzione,
                        Set<Long> articoliPadriIds, Set<Long> articoliFigliIds) {
         this.id = id;
         this.codice = codice;
@@ -63,7 +60,6 @@ public class ArticoloDto {
         this.descrizione = descrizione;
         this.dataCreazione = dataCreazione;
         this.prezzoIdeale = prezzoIdeale != null ? prezzoIdeale : BigDecimal.ZERO;
-        this.conDdt = conDdt;
         this.attivoPerProduzione = attivoPerProduzione;
         this.articoliPadriIds = articoliPadriIds;
         this.articoliFigliIds = articoliFigliIds;
@@ -72,7 +68,7 @@ public class ArticoloDto {
     // Costruttore con azienda e relazioni
     public ArticoloDto(Long id, String codice, String codiceComponente,
                        String descrizione, LocalDateTime dataCreazione,
-                       BigDecimal prezzoIdeale, boolean conDdt, boolean attivoPerProduzione,
+                       BigDecimal prezzoIdeale,  boolean attivoPerProduzione,
                        AziendaDto azienda, Set<Long> articoliPadriIds, Set<Long> articoliFigliIds) {
         this.id = id;
         this.codice = codice;
@@ -80,7 +76,6 @@ public class ArticoloDto {
         this.descrizione = descrizione;
         this.dataCreazione = dataCreazione;
         this.prezzoIdeale = prezzoIdeale != null ? prezzoIdeale : BigDecimal.ZERO;
-        this.conDdt = conDdt;
         this.attivoPerProduzione = attivoPerProduzione;
         this.azienda = azienda;
         this.articoliPadriIds = articoliPadriIds;

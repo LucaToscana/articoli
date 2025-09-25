@@ -1,6 +1,7 @@
 package com.gestione.articoli.controller;
 
 import com.gestione.articoli.dto.ArticoloDto;
+import com.gestione.articoli.dto.ArticoloHierarchyDto;
 import com.gestione.articoli.mapper.ArticoloMapper;
 import com.gestione.articoli.model.Articolo;
 import com.gestione.articoli.repository.ArticoloRepository;
@@ -24,84 +25,95 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ArticoloController {
 
-    private final ArticoloService articoloService;
-    private final ArticoloRepository articoloRepository;
+	private final ArticoloService articoloService;
+	private final ArticoloRepository articoloRepository;
 
- // Metodo esistente
-    @GetMapping
-    public List<ArticoloDto> getAll() {
-        return articoloService.findAllNoPagination();
-    }
+	// Metodo esistente
+	@GetMapping
+	public List<ArticoloDto> getAll() {
+		return articoloService.findAllNoPagination();
+	}
 
-    // Metodo paginato
-    @GetMapping("/page")
-    public Page<ArticoloDto> getArticoli(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return articoloService.findAll(page, size);
-    }
-    
-    @GetMapping("/parents")
-    public List<ArticoloDto> getAllParents() {
-        return articoloService.findAllParents();
-    }
+	// Metodo paginato
+	@GetMapping("/page")
+	public Page<ArticoloDto> getArticoli(@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "50") int size) {
+		return articoloService.findAll(page, size);
+	}
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ArticoloDto> getById(@PathVariable Long id) {
-        ArticoloDto dto = articoloService.findById(id);
-        return ResponseEntity.ok(dto);
-    }
+	@GetMapping("/parents")
+	public List<ArticoloDto> getAllParents() {
+		return articoloService.findAllParents();
+	}
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
-    public ResponseEntity<ArticoloDto> create(@RequestBody ArticoloDto articoloDto) {
-        ArticoloDto saved = articoloService.save(articoloDto);
-        return ResponseEntity.ok(saved);
-    }
+	@GetMapping("/{id}")
+	public ResponseEntity<ArticoloDto> getById(@PathVariable Long id) {
+		ArticoloDto dto = articoloService.findById(id);
+		return ResponseEntity.ok(dto);
+	}
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
-    public ResponseEntity<ArticoloDto> update(@PathVariable Long id,
-                                              @RequestBody ArticoloDto articoloDto) {
-        articoloDto.setId(id);
+	@PreAuthorize("hasRole('ADMIN')")
+	@PostMapping
+	public ResponseEntity<ArticoloDto> create(@RequestBody ArticoloDto articoloDto) {
+		ArticoloDto saved = articoloService.save(articoloDto);
+		return ResponseEntity.ok(saved);
+	}
 
-        ArticoloDto updated = articoloService.save(articoloDto);
+	@PreAuthorize("hasRole('ADMIN')")
+	@PutMapping("/{id}")
+	public ResponseEntity<ArticoloDto> update(@PathVariable Long id, @RequestBody ArticoloDto articoloDto) {
+		articoloDto.setId(id);
 
-        return ResponseEntity.ok(updated);
-    }
+		ArticoloDto updated = articoloService.save(articoloDto);
 
+		return ResponseEntity.ok(updated);
+	}
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
-        articoloService.deleteById(id);
-        return ResponseEntity.ok().build();
-    }
+	@PreAuthorize("hasRole('ADMIN')")
+	@DeleteMapping("/{id}")
+	public ResponseEntity<?> delete(@PathVariable Long id) {
+		articoloService.deleteById(id);
+		return ResponseEntity.ok().build();
+	}
 
-    @Transactional
-    @PostMapping("/{id}/upload-image")
-    public ResponseEntity<?> uploadImage(@PathVariable Long id,
-                                         @RequestParam("image") MultipartFile file) {
-        if (file.isEmpty()) return ResponseEntity.badRequest().body("Nessun file");
+	@Transactional
+	@PostMapping("/{id}/upload-image")
+	public ResponseEntity<?> uploadImage(@PathVariable Long id, @RequestParam("image") MultipartFile file) {
+		if (file.isEmpty())
+			return ResponseEntity.badRequest().body("Nessun file");
 
-        Optional<Articolo> optionalArticolo = articoloService.findEntityById(id);
-        if (optionalArticolo.isEmpty()) return ResponseEntity.notFound().build();
+		Optional<Articolo> optionalArticolo = articoloService.findEntityById(id);
+		if (optionalArticolo.isEmpty())
+			return ResponseEntity.notFound().build();
 
-        Articolo articolo = optionalArticolo.get();
-        try {
-            articolo.setImmagine(file.getBytes());
-            articoloRepository.save(articolo);
-            return ResponseEntity.ok(ArticoloMapper.toDto(articolo));
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Errore IO: " + e.getMessage());
-        }
-    }
+		Articolo articolo = optionalArticolo.get();
+		try {
+			articolo.setImmagine(file.getBytes());
+			articoloRepository.save(articolo);
+			return ResponseEntity.ok(ArticoloMapper.toDto(articolo));
+		} catch (IOException e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore IO: " + e.getMessage());
+		}
+	}
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleError(Exception e) {
-        e.printStackTrace();
-        return ResponseEntity.status(500)
-                .body("Errore: " + e.getMessage());
-    }
+	@GetMapping("/{id}/gerarchia")
+	public ResponseEntity<?> getGerarchia(@PathVariable Long id) {
+		try {
+			ArticoloHierarchyDto dto = articoloService.getGerarchia(id);
+			if (dto == null) {
+				System.out.println(id);
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Articolo con id " + id + " non trovato");
+			}
+			return ResponseEntity.ok(dto);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Errore durante il recupero della gerarchia: " + e.getMessage());
+		}
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<String> handleError(Exception e) {
+		e.printStackTrace();
+		return ResponseEntity.status(500).body("Errore: " + e.getMessage());
+	}
 }

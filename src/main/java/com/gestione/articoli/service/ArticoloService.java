@@ -1,6 +1,7 @@
 package com.gestione.articoli.service;
 
 import com.gestione.articoli.dto.ArticoloDto;
+import com.gestione.articoli.dto.ArticoloHierarchyDto;
 import com.gestione.articoli.model.Articolo;
 
 import java.util.List;
@@ -23,5 +24,7 @@ public interface ArticoloService {
 	List<ArticoloDto> findAllParents();
 
 	Page<ArticoloDto> findAll(int page, int size);
+
+	ArticoloHierarchyDto getGerarchia(Long id);
 
 }

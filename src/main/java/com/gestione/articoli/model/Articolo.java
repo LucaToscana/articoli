@@ -42,6 +42,7 @@ public class Articolo {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "azienda_id")
+    @ToString.Exclude
     private Azienda azienda;
 
     @ManyToMany

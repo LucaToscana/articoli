@@ -6,6 +6,9 @@ import com.gestione.articoli.model.User;
 import com.gestione.articoli.repository.UserRepository;
 import com.gestione.articoli.service.UserService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import jakarta.persistence.*;
@@ -17,28 +20,26 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
-
 
     @Override
     public UserDto createUser(UserDto userDto) {
-        User user = userMapper.toEntity(userDto);
+        User user = UserMapper.toEntity(userDto);
         // Qui potresti aggiungere la codifica password se serve
         User saved = userRepository.save(user);
-        return userMapper.toDto(saved);
+        return UserMapper.toDto(saved);
     }
 
     @Override
     public UserDto getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Utente non trovato con id " + id));
-        return userMapper.toDto(user);
+        return UserMapper.toDto(user);
     }
     @Override
     public List<UserDto> getAllUsers() {
         return userRepository.findAll()
                 .stream()
-                .map(userMapper::toDto)  // usa l'istanza, metodo non statico
+                .map(UserMapper::toDto)  // usa l'istanza, metodo non statico
                 .collect(Collectors.toList());
     }
     @Override
@@ -51,7 +52,7 @@ public class UserServiceImpl implements UserService {
         // aggiorna ruoli o altro se serve...
 
         User updated = userRepository.save(user);
-        return userMapper.toDto(updated);
+        return UserMapper.toDto(updated);
     }
 
     @Override
@@ -64,16 +65,32 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto findByUsername(String username) {
         return userRepository.findByUsername(username)
-                .map(userMapper::toDto)
+                .map(UserMapper::toDto)
                 .orElse(null);
     }
 
     @Override
     public UserDto save(UserDto userDto) {
-        User userEntity = userMapper.toEntity(userDto);
+        User userEntity = UserMapper.toEntity(userDto);
         // eventuale gestione password
         User savedUser = userRepository.save(userEntity);
-        return userMapper.toDto(savedUser);
+        return UserMapper.toDto(savedUser);
     }
+    /**
+     * Restituisce l'utente autenticato corrente.
+     * @return User autenticato
+     * @throws RuntimeException se non autenticato o utente non trovato
+     */
+    public User getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("Utente non autenticato");
+        }
+
+        String username = authentication.getName();
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Utente non trovato"));
+    }
 }
