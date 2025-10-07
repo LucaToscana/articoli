@@ -20,6 +20,6 @@ public class StartWorkDto {
     private String grana;                  // Grana selezionata
     private String pasta;                  // Colore pasta selezionato
     private List<String> posizione;
-    private Integer quantita;// Posizioni selezionate (multi-select)
+    private Integer quantita;
 
 }

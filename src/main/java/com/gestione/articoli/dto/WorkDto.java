@@ -1,5 +1,6 @@
 package com.gestione.articoli.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class WorkDto {
 	private String pastaColore;
 
 	private int quantita;
+    private LocalDateTime originalStartTime;
 	private LocalDateTime startTime;
 	private LocalDateTime endTime;
 
@@ -33,4 +35,7 @@ public class WorkDto {
 	private UserDto operator;
 	private UserDto operator2;
 	private UserDto operator3;
+
+    // nuovo campo per i minuti totali del gruppo
+    private BigDecimal totalMinutes;
 }

@@ -4,6 +4,7 @@ import com.gestione.articoli.dto.StartWorkDto;
 import com.gestione.articoli.dto.TotalWorkTimeDto;
 import com.gestione.articoli.dto.UserDto;
 import com.gestione.articoli.dto.WorkDto;
+import com.gestione.articoli.dto.WorkSummaryProjection;
 import com.gestione.articoli.mapper.WorkMapper;
 import com.gestione.articoli.model.*;
 import com.gestione.articoli.repository.*;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Consumer;
@@ -125,7 +127,9 @@ public class WorkServiceImpl implements WorkService {
 		operatorWork
 				.setStatus(WorkActivityType.DISPONIBILITA_LOTTO.name().equals(dto.getLavorazione()) ? WorkStatus.PAUSED
 						: WorkStatus.IN_PROGRESS);
-		operatorWork.setStartTime(LocalDateTime.now());
+		LocalDateTime originalStartTime = LocalDateTime.now();
+		operatorWork.setOriginalStartTime(originalStartTime);
+		operatorWork.setStartTime(originalStartTime);
 		workRepository.save(operatorWork);
 		return WorkMapper.toDto(operatorWork);
 	}
@@ -261,6 +265,15 @@ public class WorkServiceImpl implements WorkService {
 	}
 
 	/**
+	 * Recupera i lavori in corso di disponibilità lotto per ordini in_progress .
+	 *
+	 * @return lista di WorkDto
+	 */
+	@Override
+	public List<WorkDto> getInProgressLottoWorksWithOrderInProgress() {
+		return workRepository.findInProgressLottoWorksWithOrderInProgress().stream().map(WorkMapper::toDto).collect(Collectors.toList());
+	}
+	/**
 	 * Recupera tutti i lavori lotto.
 	 *
 	 * @return lista di WorkDto
@@ -282,11 +295,37 @@ public class WorkServiceImpl implements WorkService {
 						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()))
 				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
 	}
-	/**
-	 * Recupera tutti i lavori manuali in corso esclusi alcuni tipi di attività per ordine.
-	 *
-	 * @return lista di WorkDto
-	 */
+	
+	@Override
+	public List<WorkDto> getManualWorksWithTotalMinutesByOrderInProgress(Long orderId) {
+	    List<WorkSummaryProjection> summaries = workRepository
+	        .findActiveManualWorksWithTotalMinutesByOrderInProgressExcludingActivities(
+	            List.of(
+	                WorkActivityType.DISPONIBILITA_LOTTO.name(),
+	                WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
+	            ),
+	            orderId
+	        );
+
+	    return summaries.stream()
+	        .map(WorkMapper::workSummaryProjectionToDto) // usa il tuo metodo
+	        .toList();
+	}
+	@Override
+	public List<WorkDto> getManualWorksWithTotalMinutesByOrder(Long orderId) {
+	    List<WorkSummaryProjection> summaries = workRepository
+		        .findActiveManualWorksWithTotalMinutesByOrderExcludingActivities(
+		            List.of(
+		                WorkActivityType.DISPONIBILITA_LOTTO.name(),
+		                WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
+		            ),
+		            orderId
+		        );
+
+		    return summaries.stream()
+		        .map(WorkMapper::workSummaryProjectionToDto) // usa il tuo metodo
+		        .toList();
+	}
 	@Override
 	public List<WorkDto> getInProgressManualByOrder(Long id) {
 		return workRepository
@@ -294,6 +333,16 @@ public class WorkServiceImpl implements WorkService {
 						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()),id)
 				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
 	}
+	
+	@Override
+	public List<WorkDto> getNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(Long id) {
+		return workRepository.findNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
+						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()),id)
+				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
+	}
+	
+
+	
 	
 	/**
 	 * Esegue la transizione di un Work chiudendo quello corrente e creando un nuovo
@@ -329,6 +378,7 @@ public class WorkServiceImpl implements WorkService {
 			cloned.setOperator3(userRepository.getReferenceById(current.getOperator3().getId()));
 		cloned.setQuantita(current.getQuantita());
 		cloned.setStatus(newStatus);
+		cloned.setOriginalStartTime(current.getOriginalStartTime());
 		cloned.setStartTime(LocalDateTime.now());
 
 		return WorkMapper.toDto(workRepository.save(cloned));
@@ -473,4 +523,19 @@ public class WorkServiceImpl implements WorkService {
 			setter.accept(user);
 		}
 	}
+
+
+
+	private BigDecimal toBigDecimal(Object obj) {
+	    if (obj == null) return BigDecimal.ZERO;
+	    if (obj instanceof BigDecimal) return (BigDecimal) obj;
+	    if (obj instanceof Double) return BigDecimal.valueOf((Double) obj);
+	    try {
+	        return new BigDecimal(obj.toString());
+	    } catch (Exception e) {
+	        return BigDecimal.ZERO;
+	    }
+	}
+
+
 }

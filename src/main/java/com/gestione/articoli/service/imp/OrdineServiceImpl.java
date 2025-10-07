@@ -4,15 +4,20 @@ import com.gestione.articoli.dto.ArticoloHierarchyDto;
 import com.gestione.articoli.dto.OrderWithWorksDto;
 import com.gestione.articoli.dto.OrdineArticoloDto;
 import com.gestione.articoli.dto.OrdineDto;
+import com.gestione.articoli.dto.WorkDto;
+import com.gestione.articoli.exception.BusinessException;
 import com.gestione.articoli.mapper.ArticoloHierarchyMapper;
 import com.gestione.articoli.mapper.OrdineMapper;
 import com.gestione.articoli.model.Azienda;
 import com.gestione.articoli.model.Ordine;
 import com.gestione.articoli.model.OrdineArticolo;
+import com.gestione.articoli.model.WorkStatus;
 import com.gestione.articoli.repository.AziendaRepository;
 import com.gestione.articoli.repository.OrdineRepository;
 import com.gestione.articoli.service.OrdineService;
 import com.gestione.articoli.service.WorkService;
+
+import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +30,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class OrdineServiceImpl implements OrdineService {
 
     private final OrdineRepository ordineRepository;
@@ -32,12 +38,6 @@ public class OrdineServiceImpl implements OrdineService {
     private final AziendaRepository aziendaRepository;
     private final WorkService workService;
 
-    public OrdineServiceImpl(OrdineRepository ordineRepository ,AziendaRepository aziendaRepository , OrdineMapper ordineMapper) {
-        this.ordineRepository = ordineRepository;
-        this.aziendaRepository = aziendaRepository;
-        this.ordineMapper  = ordineMapper ;
-		this.workService = null; 
-    }
 
     @Override
     public OrdineDto createOrdine(OrdineDto dto) {
@@ -62,7 +62,18 @@ public class OrdineServiceImpl implements OrdineService {
     @Override
     public OrdineDto updateOrdine(Long id, OrdineDto dto) {
         Logger logger = LoggerFactory.getLogger(getClass());
+        if (dto != null && dto.getWorkStatus() != null 
+        	    && WorkStatus.COMPLETED.equals(dto.getWorkStatus())) {
 
+        	List<WorkDto> worksNotCompleted = workService
+        	        .getNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(id);
+
+        	    if (!worksNotCompleted.isEmpty()) {
+        	        throw new BusinessException(
+        	            "Impossibile completare l'ordine: ci sono ancora lavorazioni non concluse. "
+        	        );
+        	    }
+        }
         logger.info("UpdateOrdine chiamato con id={} e dto={}", id, dto);
 
         // Recupera l'ordine dal database
@@ -71,7 +82,6 @@ public class OrdineServiceImpl implements OrdineService {
                     logger.error("Ordine non trovato con id {}", id);
                     return new RuntimeException("Ordine non trovato con id " + id);
                 });
-
         // --- Aggiorna campi principali ---
         ordine.setDataOrdine(dto.getDataOrdine());
         ordine.setNomeDocumento(dto.getNomeDocumento());

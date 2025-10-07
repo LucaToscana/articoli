@@ -37,7 +37,7 @@ public class Ordine {
     @Enumerated(EnumType.STRING) 
     @Column(nullable = false)
     @Builder.Default
-    private WorkStatus workStatus = WorkStatus.SCHEDULED;
+    private WorkStatus workStatus = WorkStatus.PAUSED;
     
     
     @ManyToOne(fetch = FetchType.LAZY)

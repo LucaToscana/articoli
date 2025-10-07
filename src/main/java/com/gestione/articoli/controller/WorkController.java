@@ -128,7 +128,13 @@ public class WorkController {
     public List<WorkDto> getInProgressLottoWorks() {
         return workService.getInProgressLottoWorks();
     }
-
+    /**
+     * Recupera i Work lotto in corso.
+     */
+    @GetMapping("/lotto/in-progress/order/in-progress")
+    public List<WorkDto> getInProgressLottoWorksWithOrderInProgress() {
+        return workService.getInProgressLottoWorksWithOrderInProgress();
+    }
     /**
      * Recupera i Work lotto per ordine specifico.
      */
@@ -152,7 +158,36 @@ public class WorkController {
     public List<WorkDto> getInProgressManualWorks(@PathVariable Long orderId){
         return workService.getInProgressManualByOrder(orderId);
     }
+    
+    
+    /**
+     * Recupera i lavori manuali attivi per un ordine specifico IN CORSO,
+     * includendo il totale dei minuti di esecuzione per ogni gruppo.
+     *
+     * @param orderId ID dell'ordine
+     * @return lista di WorkDto con totalMinutes valorizzato
+     */
+    @GetMapping("/manual/details/{orderId}/inprogress")
+    public List<WorkDto> getManualWorksWithTotalMinutesByOrderInProgress(@PathVariable Long orderId) {
+    	 List<WorkDto> works = workService.getManualWorksWithTotalMinutesByOrderInProgress(orderId);
+        return works;
+    }
 
+    
+    /**
+     * Recupera i lavori manuali attivi per un ordine specifico IN CORSO,
+     * includendo il totale dei minuti di esecuzione per ogni gruppo.
+     *
+     * @param orderId ID dell'ordine
+     * @return lista di WorkDto con totalMinutes valorizzato
+     */
+    @GetMapping("/manual/details/{orderId}")
+    public List<WorkDto> getManualWorksWithTotalMinutesByOrder(@PathVariable Long orderId) {
+    	 List<WorkDto> works = workService.getManualWorksWithTotalMinutesByOrder(orderId);
+        return works;
+    }
+    
+    
     /**
      * Recupera tutti gli operatori.
      */

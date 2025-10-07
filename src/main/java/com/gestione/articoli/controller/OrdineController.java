@@ -23,12 +23,10 @@ import com.gestione.articoli.service.WorkService;
 public class OrdineController {
 
 	private final OrdineService ordineService;
-	private final WorkService workService;
 
 	
-	public OrdineController(OrdineService ordineService,  WorkService workService) {
+	public OrdineController(OrdineService ordineService) {
 		this.ordineService = ordineService;
-		this.workService = workService;
 	}
 
 	@GetMapping

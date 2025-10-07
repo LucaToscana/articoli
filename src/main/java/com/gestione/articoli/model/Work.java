@@ -30,7 +30,9 @@ public class Work {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private WorkStatus status;
-
+    
+    private LocalDateTime originalStartTime;
+    
     @Column(nullable = false)
     private LocalDateTime startTime;
 

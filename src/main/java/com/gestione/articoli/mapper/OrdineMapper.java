@@ -26,12 +26,11 @@ public class OrdineMapper {
 
 		Azienda azienda = aziendaRepository.findById(dto.getAziendaId())
 				.orElseThrow(() -> new RuntimeException("Azienda non trovata: " + dto.getAziendaId()));
-		System.out.println(azienda);
 		Ordine ordine = Ordine.builder().id(dto.getId())
 				.dataOrdine(dto.getDataOrdine())
 				.azienda(azienda)
 				.hasDdt(dto.isHasDdt())
-				.workStatus(dto.getWorkStatus() != null ? dto.getWorkStatus() : WorkStatus.SCHEDULED)
+				.workStatus(dto.getWorkStatus() != null ? dto.getWorkStatus() : WorkStatus.PAUSED)
 				.nomeDocumento(dto.getNomeDocumento())
 				.build();
 

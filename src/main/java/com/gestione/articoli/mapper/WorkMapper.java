@@ -9,9 +9,13 @@ import com.gestione.articoli.model.WorkSpecificType;
 import com.gestione.articoli.model.WorkStatus;
 import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.model.PastaColoreType;
+import com.gestione.articoli.model.User;
 import com.gestione.articoli.dto.WorkDto;
+import com.gestione.articoli.dto.WorkSummaryProjection;
 import com.gestione.articoli.dto.OrdineDto;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -56,6 +60,7 @@ public class WorkMapper {
                 .grana(entity.getGrana() != null ? entity.getGrana().name() : null)
                 .pastaColore(entity.getPastaColore() != null ? entity.getPastaColore().name() : null)
                 .quantita(entity.getQuantita())
+                .originalStartTime(entity.getOriginalStartTime())             
                 .startTime(entity.getStartTime())
                 .endTime(entity.getEndTime())
                 .orderArticleId(entity.getOrderArticle() != null ? entity.getOrderArticle().getId() : null)
@@ -85,6 +90,7 @@ public class WorkMapper {
                 .specifiche(dto.getSpecifiche() != null ? WorkSpecificType.valueOf(dto.getSpecifiche()) : null)
                 .grana(dto.getGrana() != null ? GranaType.valueOf(dto.getGrana()) : null)
                 .pastaColore(dto.getPastaColore() != null ? PastaColoreType.valueOf(dto.getPastaColore()) : null)
+                .originalStartTime(dto.getOriginalStartTime())             
                 .startTime(dto.getStartTime())
                 .endTime(dto.getEndTime())
                 .manager(UserMapper.toEntity(dto.getManager()))
@@ -108,4 +114,74 @@ public class WorkMapper {
 
         return builder.build();
     }
+
+
+    /**
+     * Converte un Work in WorkDto includendo il totale dei minuti.
+     *
+     * @param entity Work da convertire
+     * @param totalMinutes minuti totali da assegnare
+     * @return WorkDto con totalMinutes valorizzato
+     */
+    public static WorkDto toDtoWithTotalMinutes(Work entity, BigDecimal totalMinutes) {
+        WorkDto dto = toDto(entity); // riusa il metodo esistente
+        dto.setTotalMinutes(totalMinutes); // imposta il campo extra
+        return dto;
+    }
+    public static WorkDto workSummaryProjectionToDto(WorkSummaryProjection proj) {
+        // Creo l’oggetto Work e popolo i campi base
+        Work work = new Work();
+        work.setId(proj.getId());
+        work.setOrderArticle(new OrdineArticolo()); // se vuoi puoi popolare solo l'id
+        work.getOrderArticle().setId(proj.getOrderArticleId());
+        work.setQuantita(proj.getQuantita());
+        work.setStatus(WorkStatus.valueOf(proj.getStatus())); // se status è enum
+        work.setStartTime(proj.getStartTime());
+        work.setOriginalStartTime(proj.getOriginalStartTime());
+        work.setEndTime(proj.getEndTime());
+        
+        // Popolo gli utenti solo con l’ID
+        if (proj.getManagerId() != null) {
+            User manager = new User();
+            manager.setId(proj.getManagerId());
+            work.setManager(manager);
+        }
+        if (proj.getOperatorId() != null) {
+            User operator = new User();
+            operator.setId(proj.getOperatorId());
+            work.setOperator(operator);
+        }
+        if (proj.getOperator2Id() != null) {
+            User operator2 = new User();
+            operator2.setId(proj.getOperator2Id());
+            work.setOperator2(operator2);
+        }
+        if (proj.getOperator3Id() != null) {
+            User operator3 = new User();
+            operator3.setId(proj.getOperator3Id());
+            work.setOperator3(operator3);
+        }
+
+        // Popolo l’articolo
+        if (proj.getArticoloId() != null) {
+            Articolo articolo = new Articolo();
+            articolo.setId(proj.getArticoloId());
+            work.setArticolo(articolo);
+        }
+
+        // Enum e campi stringa
+        if (proj.getActivity() != null) work.setActivity(WorkActivityType.valueOf(proj.getActivity()));
+        if (proj.getSpecifiche() != null) work.setSpecifiche(WorkSpecificType.valueOf(proj.getSpecifiche()));
+        if (proj.getGrana() != null) work.setGrana(GranaType.valueOf(proj.getGrana()));
+        if (proj.getPastaColore() != null) work.setPastaColore(PastaColoreType.valueOf(proj.getPastaColore()));
+
+        // Ora creo il DTO da Work
+        WorkDto workDto = WorkMapper.toDto(work);
+
+        // Imposto totalMinutes dal projection
+        workDto.setTotalMinutes(proj.getTotalMinutes());
+
+        return workDto;
+    }
+
 }
