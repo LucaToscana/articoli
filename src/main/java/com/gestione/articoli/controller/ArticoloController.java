@@ -110,7 +110,15 @@ public class ArticoloController {
 					.body("Errore durante il recupero della gerarchia: " + e.getMessage());
 		}
 	}
-
+	@GetMapping("/azienda/{aziendaId}")
+	public ResponseEntity<List<ArticoloDto>> getByAzienda(@PathVariable Long aziendaId) {
+	    try {
+	        List<ArticoloDto> articoli = articoloService.findByAziendaId(aziendaId);
+	        return ResponseEntity.ok(articoli);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(500).body(null);
+	    }
+	}
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<String> handleError(Exception e) {
 		e.printStackTrace();

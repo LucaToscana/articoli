@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -57,6 +58,7 @@ public class AziendaServiceImpl implements AziendaService {
     public List<AziendaDto> getAllAziende() {
         return aziendaRepository.findAll()
                 .stream()
+                .sorted(Comparator.comparing(Azienda::getNome)) // ordina per nome
                 .map(AziendaMapper::toDto)
                 .collect(Collectors.toList());
     }

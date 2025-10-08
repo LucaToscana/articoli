@@ -174,4 +174,13 @@ public class ArticoloServiceImpl implements ArticoloService {
 		result.addAll(b);
 		return result;
 	}
+
+
+    @Override
+    public List<ArticoloDto> findByAziendaId(Long aziendaId) {
+        List<Articolo> articoli = articoloRepository.findByAziendaId(aziendaId);
+        return articoli.stream()
+                .map(ArticoloMapper::toDto)
+                .collect(Collectors.toList());
+    }
 }

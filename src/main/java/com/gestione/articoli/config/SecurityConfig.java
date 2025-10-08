@@ -29,48 +29,44 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-	    http.cors(cors -> cors.configurationSource(request -> {
-	        var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-	        corsConfig.setAllowedOrigins(java.util.List.of(
-	                "http://localhost:5173",
-	                "http://localhost:5174"
-	        ));
-	        corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-	        corsConfig.setAllowedHeaders(java.util.List.of("*"));
-	        corsConfig.setAllowCredentials(true);
-	        return corsConfig;
-	    }))
-	    .csrf(csrf -> csrf.disable())
-	    .authorizeHttpRequests(auth -> auth
-	        // Login e registrazione liberi
-	        .requestMatchers("/api/auth/**").permitAll() 
-	        // Articoli
-	        .requestMatchers(HttpMethod.POST, "/api/articoli").hasRole("ADMIN")
-	        .requestMatchers("/api/articoli").permitAll()
-	        .requestMatchers("/api/articoli/parents").permitAll()
-	        // Aziende
-	        .requestMatchers("/api/aziende").permitAll()	        
-	        //Ordini
-	        .requestMatchers(HttpMethod.POST, "/api/ordini").hasRole("ADMIN")
-	        //DDT
-	        .requestMatchers(HttpMethod.POST, "/api/ddt").hasRole("ADMIN")
-	        // Works
-	        .requestMatchers("/api/works").permitAll()
-	        .requestMatchers("/api/works/**").permitAll()
-	        //Ordini
-	        .requestMatchers(HttpMethod.POST, "/api/ordini").hasRole("ADMIN")
-	        // Works
-	        .requestMatchers("/api/works").permitAll()
-	        .requestMatchers("/api/works/**").permitAll()
-	        // Tutte le altre richieste richiedono autenticazione
-	        .anyRequest().authenticated()
-	    )
-	    .authenticationProvider(authenticationProvider())
-	    .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+		http.cors(cors -> cors.configurationSource(request -> {
+			var corsConfig = new org.springframework.web.cors.CorsConfiguration();
+			/*"http://localhost:5173",
+	         "http://localhost:5174"*/
+			/*"https://ilpicchio.cloud", "https://www.ilpicchio.cloud"
+			 * */
+			corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:5173",
+			         "http://localhost:5174"));
+			corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+			corsConfig.setAllowedHeaders(java.util.List.of("*"));
+			corsConfig.setAllowCredentials(true);
+			return corsConfig;
+		})).csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth
+				// Login e registrazione liberi
+				.requestMatchers("/api/auth/**").permitAll()
+				// Articoli
+				.requestMatchers(HttpMethod.POST, "/api/articoli").hasRole("ADMIN").requestMatchers("/api/articoli")
+				.permitAll().requestMatchers("/api/articoli/parents").permitAll()
+				// Aziende
+				.requestMatchers("/api/aziende").permitAll()
+				// Ordini
+				.requestMatchers(HttpMethod.POST, "/api/ordini").hasRole("ADMIN")
+				// DDT
+				.requestMatchers(HttpMethod.POST, "/api/ddt").hasRole("ADMIN")
+				// Works
+				.requestMatchers("/api/works").permitAll().requestMatchers("/api/works/**").permitAll()
+				// Ordini
+				.requestMatchers(HttpMethod.POST, "/api/ordini").hasRole("ADMIN")
+			    // Ordine Risultati → solo admin può leggere e scrivere
+			    .requestMatchers("/api/ordine-risultati/**").hasRole("ADMIN")
+				// Works
+				.requestMatchers("/api/works").permitAll().requestMatchers("/api/works/**").permitAll()
+				// Tutte le altre richieste richiedono autenticazione
+				.anyRequest().authenticated()).authenticationProvider(authenticationProvider())
+				.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
-	    return http.build();
+		return http.build();
 	}
-
 
 	@Bean
 	public AuthenticationProvider authenticationProvider() {

@@ -23,4 +23,6 @@ public interface ArticoloRepository extends JpaRepository<Articolo, Long> {
     Optional<Articolo> findByIdWithFigli(@Param("id") Long id);
     @Query("SELECT a FROM Articolo a LEFT JOIN FETCH a.articoliFigli LEFT JOIN FETCH a.articoliPadri WHERE a.id = :id")
     Optional<Articolo> findByIdWithFigliAndPadri(@Param("id") Long id);
+    // Recupera tutti gli articoli per una specifica azienda
+    List<Articolo> findByAziendaId(Long aziendaId);
 }

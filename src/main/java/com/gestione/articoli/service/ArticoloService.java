@@ -14,6 +14,7 @@ public interface ArticoloService {
     ArticoloDto save(ArticoloDto articoloDto);
 
     ArticoloDto findById(Long id);
+    List<ArticoloDto> findByAziendaId(Long aziendaId);
 
     List<ArticoloDto> findAllNoPagination();
 
