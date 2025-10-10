@@ -1,5 +1,6 @@
 package com.gestione.articoli.service.imp;
 
+import com.gestione.articoli.dto.OrdineArticoloDto;
 import com.gestione.articoli.dto.OrdineRisultatoDto;
 import com.gestione.articoli.dto.WorkDto;
 import com.gestione.articoli.mapper.OrdineRisultatoMapper;
@@ -9,16 +10,19 @@ import com.gestione.articoli.model.OrdineRisultato;
 import com.gestione.articoli.repository.ArticoloRepository;
 import com.gestione.articoli.repository.OrdineRepository;
 import com.gestione.articoli.repository.OrdineRisultatoRepository;
+import com.gestione.articoli.service.OrdineArticoloService;
 import com.gestione.articoli.service.OrdineRisultatoService;
 import com.gestione.articoli.service.WorkService;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +35,7 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 	private final WorkService workService;
 	private final OrdineRepository ordineRepository;
 	private final ArticoloRepository articoloRepository;
+    private final OrdineArticoloService ordineArticoloService;
 
 	@Override
 	public OrdineRisultatoDto save(OrdineRisultatoDto dto) {
@@ -50,99 +55,145 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 	}
 
 	@Override
+	@Transactional
 	public List<OrdineRisultatoDto> getByOrdineId(Long ordineId) {
-		return repository.findByOrdineId(ordineId).stream().map(OrdineRisultatoMapper::toDto)
-				.collect(Collectors.toList());
+	    return repository.findByOrdineIdWithJoin(ordineId)
+	        .stream()
+	        .map(r -> {
+	            OrdineRisultatoDto dto = new OrdineRisultatoDto();
+	            
+	            // dati OrdineRisultato
+	            dto.setId(r.getId());
+	            dto.setMolaturaReale(r.getMolaturaReale());
+	            dto.setMolaturaFatturabile(r.getMolaturaFatturabile());
+	            dto.setLucidaturaReale(r.getLucidaturaReale());
+	            dto.setLucidaturaFatturabile(r.getLucidaturaFatturabile());
+	            dto.setSaldaturaReale(r.getSaldaturaReale());
+	            dto.setSaldaturaFatturabile(r.getSaldaturaFatturabile());
+	            dto.setForaturaReale(r.getForaturaReale());
+	            dto.setForaturaFatturabile(r.getForaturaFatturabile());
+	            dto.setFilettaturaReale(r.getFilettaturaReale());
+	            dto.setFilettaturaFatturabile(r.getFilettaturaFatturabile());
+	            dto.setMontaggioReale(r.getMontaggioReale());
+	            dto.setMontaggioFatturabile(r.getMontaggioFatturabile());
+	            dto.setScatolaturaReale(r.getScatolaturaReale());
+	            dto.setScatolaturaFatturabile(r.getScatolaturaFatturabile());
+	            dto.setDataRisultato(r.getDataRisultato());
+	            dto.setPrezzo(r.getPrezzo());
+	            dto.setQuantita(r.getQuantita());
+
+	            // dati Ordine
+	            Ordine o = r.getOrdine();
+	            dto.setOrdineId(o.getId());
+	            dto.setWorkStatus(o.getWorkStatus());
+	            dto.setDataOrdine(o.getDataOrdine());
+	            dto.setAziendaNome(o.getAzienda() != null ? o.getAzienda().getNome() : null);
+
+	            // dati Articolo
+	            Articolo a = r.getArticolo();
+	            dto.setArticoloId(a.getId());
+	            String codice = a.getCodice();
+	            if (a.getCodiceComponente() != null && !a.getCodiceComponente().isEmpty()) {
+	                codice += "/" + a.getCodiceComponente();
+	            }
+	            dto.setArticoloCodice(codice);
+
+	            return dto;
+	        })
+	        .collect(Collectors.toList());
 	}
 
+	@Transactional
 	@Override
 	public void delete(Long id) {
 		repository.deleteById(id);
 	}
-
+	@Transactional
 	@Override
 	public List<OrdineRisultato> generaRisultatiDaWorks(Long ordineId, BigDecimal prezzo) {
-		// 🔹 1. Recupera l’ordine
-		Ordine ordine = ordineRepository.findById(ordineId)
-				.orElseThrow(() -> new EntityNotFoundException("Ordine non trovato con id: " + ordineId));
+	    // 🔹 1. Recupera l’ordine
+	    Ordine ordine = ordineRepository.findById(ordineId)
+	            .orElseThrow(() -> new EntityNotFoundException("Ordine non trovato con id: " + ordineId));
 
-		// 🔹 2. Recupera tutti i lavori manuali con totalMinutes
-		List<WorkDto> works = workService.getManualWorksWithTotalMinutesByOrder(ordineId);
+	    // 🔹 2. Elimina eventuali risultati precedenti per questo ordine
+	    repository.deleteByOrdineId(ordineId);
 
-		// 🔹 3. Raggruppa per articolo
-		Map<Long, List<WorkDto>> lavoriPerArticolo = works.stream().filter(w -> w.getArticolo() != null)
-				.collect(Collectors.groupingBy(w -> w.getArticolo().getId()));
+	    // 🔹 3. Recupera tutti i lavori manuali con totalMinutes
+	    List<WorkDto> works = workService.getManualWorksWithTotalMinutesByOrder(ordineId);
 
-		List<OrdineRisultato> risultati = new ArrayList<>();
+	    // 🔹 4. Recupera tutti gli articoli dell’ordine
+	    List<OrdineArticoloDto> articoliOrdine = ordineArticoloService.getAllOrdineArticoliByOrdineId(ordineId);
 
-		for (Map.Entry<Long, List<WorkDto>> entry : lavoriPerArticolo.entrySet()) {
-			Long articoloId = entry.getKey();
-			List<WorkDto> lavori = entry.getValue();
+	    // 🔹 5. Raggruppa lavori per OrdineArticolo.id
+	    Map<Long, List<WorkDto>> lavoriPerOrdineArticolo = works.stream()
+	            .filter(w -> w.getOrdineArticolo() != null && w.getOrdineArticolo().getId() != null)
+	            .collect(Collectors.groupingBy(w -> w.getOrdineArticolo().getId()));
 
-			Articolo articolo = articoloRepository.findById(articoloId)
-					.orElseThrow(() -> new EntityNotFoundException("Articolo non trovato: " + articoloId));
+	    List<OrdineRisultato> risultati = new ArrayList<>();
 
-			OrdineRisultato risultato = OrdineRisultato.createEmpty(ordine, articolo, prezzo);
+	    // 🔹 6. Genera risultati per ogni OrdineArticolo
+	    for (OrdineArticoloDto ordineArticolo : articoliOrdine) {
+	        Long ordineArticoloId = ordineArticolo.getId();
+	        List<WorkDto> lavori = lavoriPerOrdineArticolo.getOrDefault(ordineArticoloId, Collections.emptyList());
 
+	        Articolo articolo = articoloRepository.findById(ordineArticolo.getArticoloId())
+	                .orElseThrow(() -> new EntityNotFoundException("Articolo non trovato: " + ordineArticolo.getArticoloId()));
 
-			// 🔹 4. Calcolo minuti reali e fatturabili per ogni attività
-			for (WorkDto w : lavori) {
-				BigDecimal durataReale = w.getTotalMinutes() != null ? w.getTotalMinutes() : BigDecimal.ZERO;
+	        OrdineRisultato risultato = OrdineRisultato.createEmpty(ordine, articolo, prezzo);
 
-				int operatorCount = 0;
-				if (w.getOperator() != null)
-					operatorCount++;
-				if (w.getOperator2() != null)
-					operatorCount++;
-				if (w.getOperator3() != null)
-					operatorCount++;
-				if (operatorCount == 0)
-					operatorCount = 1;
+	        // Quantità totale dell’articolo nell’ordine
+	        risultato.setQuantita(BigDecimal.valueOf(ordineArticolo.getQuantita()));
 
-				BigDecimal durataFatturabile = durataReale.multiply(BigDecimal.valueOf(operatorCount));
+	        // 🔹 7. Calcolo minuti reali e fatturabili per ogni attività
+	        for (WorkDto w : lavori) {
+	            BigDecimal durataReale = w.getTotalMinutes() != null ? w.getTotalMinutes() : BigDecimal.ZERO;
 
-				switch (w.getActivity()) {
-				case "MOLATURA" -> {
-					risultato.setMolaturaReale(risultato.getMolaturaReale().add(durataReale));
-					risultato.setMolaturaFatturabile(risultato.getMolaturaFatturabile().add(durataFatturabile));
-				}
-				case "LUCIDATURA" -> {
-					risultato.setLucidaturaReale(risultato.getLucidaturaReale().add(durataReale));
-					risultato.setLucidaturaFatturabile(risultato.getLucidaturaFatturabile().add(durataFatturabile));
-				}
-				case "SALDATURA" -> {
-					risultato.setSaldaturaReale(risultato.getSaldaturaReale().add(durataReale));
-					risultato.setSaldaturaFatturabile(risultato.getSaldaturaFatturabile().add(durataFatturabile));
-				}
-				case "FORATURA" -> {
-					risultato.setForaturaReale(risultato.getForaturaReale().add(durataReale));
-					risultato.setForaturaFatturabile(risultato.getForaturaFatturabile().add(durataFatturabile));
-				}
-				case "FILETTATURA" -> {
-					risultato.setFilettaturaReale(risultato.getFilettaturaReale().add(durataReale));
-					risultato.setFilettaturaFatturabile(risultato.getFilettaturaFatturabile().add(durataFatturabile));
-				}
-				case "MONTAGGIO" -> {
-					risultato.setMontaggioReale(risultato.getMontaggioReale().add(durataReale));
-					risultato.setMontaggioFatturabile(risultato.getMontaggioFatturabile().add(durataFatturabile));
-				}
-				case "SCATOLATURA" -> {
-					risultato.setScatolaturaReale(risultato.getScatolaturaReale().add(durataReale));
-					risultato.setScatolaturaFatturabile(risultato.getScatolaturaFatturabile().add(durataFatturabile));
-				}
-				default -> {
-					/* ignora altre attività */ }
-				}
+	            int operatorCount = 0;
+	            if (w.getOperator() != null) operatorCount++;
+	            if (w.getOperator2() != null) operatorCount++;
+	            if (w.getOperator3() != null) operatorCount++;
+	            if (operatorCount == 0) operatorCount = 1;
 
-				// Quantità totale
-				risultato.setQuantita(risultato.getQuantita().add(BigDecimal.valueOf(w.getQuantita())));
-			}
+	            BigDecimal durataFatturabile = durataReale.multiply(BigDecimal.valueOf(operatorCount));
 
-			risultati.add(risultato);
-		}
+	            switch (w.getActivity()) {
+	                case "MOLATURA" -> {
+	                    risultato.setMolaturaReale(risultato.getMolaturaReale().add(durataReale));
+	                    risultato.setMolaturaFatturabile(risultato.getMolaturaFatturabile().add(durataFatturabile));
+	                }
+	                case "LUCIDATURA" -> {
+	                    risultato.setLucidaturaReale(risultato.getLucidaturaReale().add(durataReale));
+	                    risultato.setLucidaturaFatturabile(risultato.getLucidaturaFatturabile().add(durataFatturabile));
+	                }
+	                case "SALDATURA" -> {
+	                    risultato.setSaldaturaReale(risultato.getSaldaturaReale().add(durataReale));
+	                    risultato.setSaldaturaFatturabile(risultato.getSaldaturaFatturabile().add(durataFatturabile));
+	                }
+	                case "FORATURA" -> {
+	                    risultato.setForaturaReale(risultato.getForaturaReale().add(durataReale));
+	                    risultato.setForaturaFatturabile(risultato.getForaturaFatturabile().add(durataFatturabile));
+	                }
+	                case "FILETTATURA" -> {
+	                    risultato.setFilettaturaReale(risultato.getFilettaturaReale().add(durataReale));
+	                    risultato.setFilettaturaFatturabile(risultato.getFilettaturaFatturabile().add(durataFatturabile));
+	                }
+	                case "MONTAGGIO" -> {
+	                    risultato.setMontaggioReale(risultato.getMontaggioReale().add(durataReale));
+	                    risultato.setMontaggioFatturabile(risultato.getMontaggioFatturabile().add(durataFatturabile));
+	                }
+	                case "SCATOLATURA" -> {
+	                    risultato.setScatolaturaReale(risultato.getScatolaturaReale().add(durataReale));
+	                    risultato.setScatolaturaFatturabile(risultato.getScatolaturaFatturabile().add(durataFatturabile));
+	                }
+	                default -> { /* ignora altre attività */ }
+	            }
+	        }
 
-		// 🔹 5. Salva i risultati
-		return repository.saveAll(risultati);
+	        risultati.add(risultato);
+	    }
+
+	    // 🔹 8. Salva tutti i risultati
+	    return repository.saveAll(risultati);
 	}
 
 }

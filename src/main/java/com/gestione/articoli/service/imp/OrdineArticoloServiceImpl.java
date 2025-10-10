@@ -48,6 +48,13 @@ public class OrdineArticoloServiceImpl implements OrdineArticoloService {
                 .orElseThrow(() -> new RuntimeException("OrdineArticolo non trovato con id " + id));
         return OrdineArticoloMapper.toDto(entity);
     }
+    @Override
+    public List<OrdineArticoloDto> getAllOrdineArticoliByOrdineId(Long ordineId) {
+        return repository.findByOrdineId(ordineId)
+                .stream()
+                .map(OrdineArticoloMapper::toDto)
+                .collect(Collectors.toList());
+    }
 
     @Override
     public List<OrdineArticoloDto> getAllOrdineArticoli() {

@@ -16,6 +16,7 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 
     /* ========= STANDARD FINDERS ========= */
     List<Work> findByOrderArticleId(Long orderArticleId);
+    List<Work> findByOrderArticleAndActivity(OrdineArticolo orderArticle, WorkActivityType activity);
 
     List<Work> findByOrderArticle(OrdineArticolo ordineArticolo);
 

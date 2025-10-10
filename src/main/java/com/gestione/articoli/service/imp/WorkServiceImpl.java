@@ -160,13 +160,34 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public WorkDto updateWork(Long id, WorkDto dto) {
-		Work work = workRepository.findById(id)
-				.orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
-		work.setStatus(dto.getStatus() != null ? WorkStatus.valueOf(dto.getStatus()) : work.getStatus());
-		work.setStartTime(dto.getStartTime());
-		work.setEndTime(dto.getEndTime());
-		return WorkMapper.toDto(workRepository.save(work));
+	    Work work = workRepository.findById(id)
+	            .orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
+
+	    // Aggiorna lo stato principale
+	    if (dto.getStatus() != null) {
+	        WorkStatus newStatus = WorkStatus.valueOf(dto.getStatus());
+	        work.setStatus(newStatus);
+
+	        // Se è DISPONIBILITA_LAVORAZIONE aggiorna anche i lavori DISPONIBILITA_LOTTO
+	        if (work.getActivity() == WorkActivityType.DISPONIBILITA_LAVORAZIONE &&
+	            (newStatus == WorkStatus.PAUSED || newStatus == WorkStatus.COMPLETED)) {
+
+	            List<Work> lottoWorks = workRepository.findByOrderArticleAndActivity(
+	                    work.getOrderArticle(), WorkActivityType.DISPONIBILITA_LOTTO);
+
+	            for (Work lottoWork : lottoWorks) {
+	                lottoWork.setStatus(newStatus);
+	                workRepository.save(lottoWork);
+	            }
+	        }
+	    }
+
+	    work.setStartTime(dto.getStartTime());
+	    work.setEndTime(dto.getEndTime());
+
+	    return WorkMapper.toDto(workRepository.save(work));
 	}
+
 
 	/**
 	 * Cancella un Work.

@@ -31,12 +31,13 @@ public class SecurityConfig {
 
 		http.cors(cors -> cors.configurationSource(request -> {
 			var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-			/*"http://localhost:5173",
-	         "http://localhost:5174"*/
-			/*"https://ilpicchio.cloud", "https://www.ilpicchio.cloud"
-			 * */
-			corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:5173",
-			         "http://localhost:5174"));
+			/*
+			 * "http://localhost:5173", "http://localhost:5174"
+			 */
+			/*
+			 * "https://ilpicchio.cloud", "https://www.ilpicchio.cloud"
+			 */
+			corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:5173", "http://localhost:5174"));
 			corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 			corsConfig.setAllowedHeaders(java.util.List.of("*"));
 			corsConfig.setAllowCredentials(true);
@@ -57,12 +58,17 @@ public class SecurityConfig {
 				.requestMatchers("/api/works").permitAll().requestMatchers("/api/works/**").permitAll()
 				// Ordini
 				.requestMatchers(HttpMethod.POST, "/api/ordini").hasRole("ADMIN")
-			    // Ordine Risultati → solo admin può leggere e scrivere
-			    .requestMatchers("/api/ordine-risultati/**").hasRole("ADMIN")
+				// Ordine Risultati → solo admin può leggere e scrivere
+				.requestMatchers("/api/ordine-risultati/**").hasRole("ADMIN")
 				// Works
 				.requestMatchers("/api/works").permitAll().requestMatchers("/api/works/**").permitAll()
+				
+				.requestMatchers("/api/statistics/**").hasRole("ADMIN") // solo admin può leggere le statistiche
+
 				// Tutte le altre richieste richiedono autenticazione
 				.anyRequest().authenticated()).authenticationProvider(authenticationProvider())
+				// Statistiche
+
 				.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();

@@ -9,4 +9,6 @@ public interface OrdineArticoloService {
     void deleteOrdineArticolo(Long id);
     OrdineArticoloDto getOrdineArticoloById(Long id);
     List<OrdineArticoloDto> getAllOrdineArticoli();
+    List<OrdineArticoloDto> getAllOrdineArticoliByOrdineId(Long ordineId);
+
 }
