@@ -11,9 +11,11 @@ import com.gestione.articoli.mapper.OrdineMapper;
 import com.gestione.articoli.model.Azienda;
 import com.gestione.articoli.model.Ordine;
 import com.gestione.articoli.model.OrdineArticolo;
+import com.gestione.articoli.model.WorkActivityType;
 import com.gestione.articoli.model.WorkStatus;
 import com.gestione.articoli.repository.AziendaRepository;
 import com.gestione.articoli.repository.OrdineRepository;
+import com.gestione.articoli.repository.WorkRepository;
 import com.gestione.articoli.service.OrdineService;
 import com.gestione.articoli.service.WorkService;
 
@@ -74,8 +76,6 @@ public class OrdineServiceImpl implements OrdineService {
         	        );
         	    }
         }
-        logger.info("UpdateOrdine chiamato con id={} e dto={}", id, dto);
-
         // Recupera l'ordine dal database
         Ordine ordine = ordineRepository.findById(id)
                 .orElseThrow(() -> {
@@ -118,9 +118,13 @@ public class OrdineServiceImpl implements OrdineService {
             }
         }
 
-
         // Salva l'ordine aggiornato
         ordineRepository.save(ordine);
+        
+        if(WorkStatus.COMPLETED.equals(dto.getWorkStatus())) {
+        	workService.cleanCompletedOrderWorks(id);
+        }
+        
         logger.info("Ordine salvato con successo: {}", ordine.getId());
 
         // Converte in DTO e restituisce

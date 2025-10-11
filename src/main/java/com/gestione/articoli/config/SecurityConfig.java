@@ -62,7 +62,7 @@ public class SecurityConfig {
 				.requestMatchers("/api/ordine-risultati/**").hasRole("ADMIN")
 				// Works
 				.requestMatchers("/api/works").permitAll().requestMatchers("/api/works/**").permitAll()
-				
+
 				.requestMatchers("/api/statistics/**").hasRole("ADMIN") // solo admin può leggere le statistiche
 
 				// Tutte le altre richieste richiedono autenticazione

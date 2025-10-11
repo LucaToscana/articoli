@@ -46,6 +46,7 @@ public interface WorkService {
     /* ========= DELETE ========= */
     void deleteWork(Long id);
 	void deleteLottoWork(Long id);
+	void cleanCompletedOrderWorks(Long orderId);
 
 }
 

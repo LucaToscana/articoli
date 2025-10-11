@@ -14,6 +14,10 @@ import com.gestione.articoli.service.WorkValidationService;
 import com.gestione.articoli.utils.WorkUtils;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -200,7 +204,29 @@ public class WorkServiceImpl implements WorkService {
 			throw new RuntimeException("Work non trovato con id " + id);
 		workRepository.deleteById(id);
 	}
+	
+	@Transactional
+	public void cleanCompletedOrderWorks(Long orderId) {
+	    List<WorkActivityType> activitiesToDelete = List.of(
+	        WorkActivityType.DISPONIBILITA_LOTTO,
+	        WorkActivityType.DISPONIBILITA_LAVORAZIONE
+	    );
 
+	    // 1️⃣ Recupera i Work da cancellare
+	    List<Work> worksToDelete = workRepository.findByOrderArticleOrdineIdAndActivityIn(orderId, activitiesToDelete);
+
+	    // 2️⃣ Cancella uno ad uno
+	    for (Work w : worksToDelete) {
+	        workRepository.delete(w);
+	    }
+
+	    // 3️⃣ Eventuale secondo delete, escludendo alcuni status
+	    List<WorkStatus> excludedStatuses = List.of(WorkStatus.IN_PROGRESS);
+	    List<Work> worksToDelete2 = workRepository.findByOrderArticleOrdineIdAndStatusNotIn(orderId, excludedStatuses);
+	    for (Work w : worksToDelete2) {
+	        workRepository.delete(w);
+	    }
+	}
 	/**
 	 * Recupera un Work per ID.
 	 *
@@ -481,27 +507,56 @@ public class WorkServiceImpl implements WorkService {
 	@Override
 	public WorkDto updateLottoWork(Long id, WorkDto dto) {
 
-		Work work = workRepository.findById(id)
-				.orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
+	    Work work = workRepository.findById(id)
+	            .orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
 
-		work.setStatus(dto.getStatus() != null ? WorkStatus.valueOf(dto.getStatus()) : work.getStatus());
-		work.setQuantita(dto.getQuantita());
+	    WorkStatus newStatus = dto.getStatus() != null
+	            ? WorkStatus.valueOf(dto.getStatus())
+	            : work.getStatus();
 
-		// Operatori: se l'ID è presente nel DTO, fai il lookup, altrimenti setti null
-		work.setOperator(dto.getOperator() != null && dto.getOperator().getId() != null
-				? userRepository.findById(dto.getOperator().getId()).orElse(null)
-				: null);
+	    // ✅ Se la lavorazione è di tipo DISPONIBILITA_LAVORAZIONE,
+	    //    e si vuole impostare IN_PROGRESS ma la lavorazione principale è in pausa o completata
+	    if (work.getActivity() == WorkActivityType.DISPONIBILITA_LOTTO
+	            ) {
 
-		work.setOperator2(dto.getOperator2() != null && dto.getOperator2().getId() != null
-				? userRepository.findById(dto.getOperator2().getId()).orElse(null)
-				: null);
+	        // Recupera la lavorazione principale associata all’ordine/articolo
+	        List<Work> mainWorks = workRepository.findByOrderArticleAndActivity(
+	                work.getOrderArticle(),
+	                WorkActivityType.DISPONIBILITA_LAVORAZIONE
+	        );
 
-		work.setOperator3(dto.getOperator3() != null && dto.getOperator3().getId() != null
-				? userRepository.findById(dto.getOperator3().getId()).orElse(null)
-				: null);
+	        if (!mainWorks.isEmpty()) {
+	            Work mainWork = mainWorks.get(0); // in genere una sola lavorazione principale
 
-		Work newWork = workRepository.save(work);
-		return WorkMapper.toDto(newWork);
+	            if (mainWork.getStatus() == WorkStatus.PAUSED || mainWork.getStatus() == WorkStatus.COMPLETED) {
+	                throw new IllegalStateException(
+	                        String.format(
+	                            "Impossibile mettere in corso la disponibilità di lavorazione: la lavorazione principale è attualmente %s.",
+	                            mainWork.getStatus() == WorkStatus.PAUSED ? "in pausa" : "completata"
+	                        )
+	                );
+	            }
+	        }
+	    }
+
+	    work.setStatus(newStatus);
+	    work.setQuantita(dto.getQuantita());
+
+	    // Operatori (lookup se presente ID)
+	    work.setOperator(dto.getOperator() != null && dto.getOperator().getId() != null
+	            ? userRepository.findById(dto.getOperator().getId()).orElse(null)
+	            : null);
+
+	    work.setOperator2(dto.getOperator2() != null && dto.getOperator2().getId() != null
+	            ? userRepository.findById(dto.getOperator2().getId()).orElse(null)
+	            : null);
+
+	    work.setOperator3(dto.getOperator3() != null && dto.getOperator3().getId() != null
+	            ? userRepository.findById(dto.getOperator3().getId()).orElse(null)
+	            : null);
+
+	    Work newWork = workRepository.save(work);
+	    return WorkMapper.toDto(newWork);
 	}
 
 	/**

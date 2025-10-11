@@ -5,7 +5,11 @@ import com.gestione.articoli.model.WorkActivityType;
 import com.gestione.articoli.dto.WorkSummaryProjection;
 import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.model.WorkStatus;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -158,12 +162,11 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
                    "JOIN ordini o ON oa.ordine_id = o.id " +
                    "WHERE w.activity NOT IN (:excludedActivities) " +
                    "AND o.id = :orderId " +
-                   "AND w.status != 'COMPLETED') sub " +
+                   "AND w.end_time IS NULL " +
+                   "AND w.status = 'IN_PROGRESS') sub " +
                    "WHERE rn = 1", nativeQuery = true)
-    List<Work> findNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(@Param("excludedActivities") List<String> excludedActivities,
-  /*SUM(
-  EXTRACT(EPOCH FROM (COALESCE(w.end_time, NOW()) - w.start_time)) / 60
-)*/                                                                               @Param("orderId") Long orderId);
+    List<Work> findNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus
+    (@Param("excludedActivities") List<String> excludedActivities,@Param("orderId") Long orderId);
 
     @Query(value = "SELECT * FROM (" +
                    "SELECT w.*, ROW_NUMBER() OVER (" +
@@ -219,4 +222,47 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
            "AND o.id = :orderId " +
            "ORDER BY w.startTime DESC")
     List<Work> findLottoWorksByOrder(@Param("orderId") Long orderId);
+    
+    List<Work> findByOrderArticle_Ordine_IdAndActivityIn(Long orderId, List<WorkActivityType> activities);
+    @Modifying
+    @Query("DELETE FROM Work w " +
+           "WHERE w.orderArticle.ordine.id = :ordineId " +
+           "AND w.activity IN :activities")
+    void deleteByOrdineIdAndActivities(
+            @Param("ordineId") Long ordineId,
+            @Param("activities") List<WorkActivityType> activities
+    );
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM work_positions WHERE work_id IN (" +
+            "SELECT w.id FROM works w " +
+            "JOIN ordine_articoli oa ON w.order_article_id = oa.id " +
+            "WHERE oa.ordine_id = :ordineId AND w.activity IN (:activities))",
+            nativeQuery = true)
+    void deleteWorkPositions(@Param("ordineId") Long ordineId, @Param("activities") List<String> activities);
+
+    // Poi cancella i Work
+    @Modifying
+    @Query("DELETE FROM Work w " +
+           "WHERE w.orderArticle.ordine.id = :ordineId " +
+           "AND w.activity IN :activities")
+    void deleteWorksByOrdineIdAndActivities(
+            @Param("ordineId") Long ordineId,
+            @Param("activities") List<WorkActivityType> activities
+    );
+
+    // Cancella i Work escludendo alcuni status
+    @Modifying
+    @Query("DELETE FROM Work w " +
+           "WHERE w.orderArticle.ordine.id = :ordineId " +
+           "AND w.status NOT IN :excludedStatuses")
+    void deleteByOrderIdExcludingStatuses(
+            @Param("ordineId") Long ordineId,
+            @Param("excludedStatuses") List<WorkStatus> excludedStatuses
+    );
+    List<Work> findByOrderArticleOrdineIdAndActivityIn(Long ordineId, List<WorkActivityType> activities);
+
+    List<Work> findByOrderArticleOrdineIdAndStatusNotIn(Long ordineId, List<WorkStatus> excludedStatuses);
+
 }
