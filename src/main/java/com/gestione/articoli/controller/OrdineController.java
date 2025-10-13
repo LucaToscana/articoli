@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gestione.articoli.dto.ArticoloDto;
 import com.gestione.articoli.dto.ArticoloHierarchyDto;
+import com.gestione.articoli.dto.FastOrderDto;
 import com.gestione.articoli.dto.OrdineDto;
 import com.gestione.articoli.dto.WorkDto;
 import com.gestione.articoli.service.OrdineService;
@@ -42,6 +44,10 @@ public class OrdineController {
 	@PostMapping
 	public OrdineDto create(@RequestBody OrdineDto dto) {
 		return ordineService.createOrdine(dto);
+	}
+	@PostMapping("/fast-order")
+	public ArticoloDto createFastOrder(@RequestBody FastOrderDto dto) {
+		return ordineService.createFastOrder(dto);
 	}
 
 	@PutMapping("/{id}")

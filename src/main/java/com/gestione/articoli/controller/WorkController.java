@@ -193,7 +193,7 @@ public class WorkController {
      */
     @GetMapping("/operators")
     public List<UserDto> getOperators() {
-        return userService.getAllUsers();
+        return userService.getAllActiveOperators();
     }
 
     /* ========= UPDATE ========= */

@@ -10,6 +10,7 @@ import com.gestione.articoli.repository.UserRepository;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.math.BigDecimal;
 import java.util.Set;
 
 @Component
@@ -31,7 +32,9 @@ public class DataInitializer implements CommandLineRunner {
             admin.setUsername(defaultAdmin);
             admin.setPassword(passwordEncoder.encode("admin"));  // password di default
             admin.setRoles(Set.of(Role.ADMIN));  // ruolo admin
-
+            admin.setMachineUser(false);
+            admin.setActiveInCompany(true);
+            admin.setRetribuzioneOraria(BigDecimal.ZERO);
             userRepository.save(admin);
 
             System.out.println("Utente admin creato all'avvio");
@@ -45,7 +48,9 @@ public class DataInitializer implements CommandLineRunner {
             user.setUsername(defaultUser);
             user.setPassword(passwordEncoder.encode("user"));  // password di default
             user.setRoles(Set.of(Role.USER));  // ruolo user
-
+            user.setMachineUser(true);
+            user.setActiveInCompany(true);
+            user.setRetribuzioneOraria(BigDecimal.ZERO);
             userRepository.save(user);
 
             System.out.println("Utente admin creato all'avvio");

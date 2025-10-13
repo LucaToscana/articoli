@@ -46,24 +46,26 @@ public class SecurityConfig {
 				// Login e registrazione liberi
 				.requestMatchers("/api/auth/**").permitAll()
 				// Articoli
-				.requestMatchers(HttpMethod.POST, "/api/articoli").hasRole("ADMIN").requestMatchers("/api/articoli")
-				.permitAll().requestMatchers("/api/articoli/parents").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/articoli").hasRole("ADMIN")
+				.requestMatchers("/api/articoli").hasRole("ADMIN")
+				.requestMatchers("/api/articoli/parents").hasRole("ADMIN")
 				// Aziende
-				.requestMatchers("/api/aziende").permitAll()
+				.requestMatchers("/api/aziende").hasRole("ADMIN")
 				// Ordini
 				.requestMatchers(HttpMethod.POST, "/api/ordini").hasRole("ADMIN")
 				// DDT
 				.requestMatchers(HttpMethod.POST, "/api/ddt").hasRole("ADMIN")
-				// Works
-				.requestMatchers("/api/works").permitAll().requestMatchers("/api/works/**").permitAll()
 				// Ordini
 				.requestMatchers(HttpMethod.POST, "/api/ordini").hasRole("ADMIN")
 				// Ordine Risultati → solo admin può leggere e scrivere
 				.requestMatchers("/api/ordine-risultati/**").hasRole("ADMIN")
 				// Works
-				.requestMatchers("/api/works").permitAll().requestMatchers("/api/works/**").permitAll()
+				.requestMatchers("/api/works").hasAnyRole("USER", "ADMIN")
+				.requestMatchers("/api/works/**").hasAnyRole("USER", "ADMIN")
 
 				.requestMatchers("/api/statistics/**").hasRole("ADMIN") // solo admin può leggere le statistiche
+				.requestMatchers("/api/users/**").hasRole("ADMIN") // solo admin può leggere le statistiche
+				.requestMatchers("/api/users").hasRole("ADMIN") // solo admin può leggere le statistiche
 
 				// Tutte le altre richieste richiedono autenticazione
 				.anyRequest().authenticated()).authenticationProvider(authenticationProvider())

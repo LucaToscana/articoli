@@ -2,6 +2,8 @@ package com.gestione.articoli.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -11,8 +13,6 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Getter 
-@Setter
 public class User {
 
     @Id
@@ -29,8 +29,21 @@ public class User {
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
     private Set<Role> roles = new HashSet<>();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean activeInCompany = true;
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean machineUser = false;
     
     
+    @Column(nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal retribuzioneOraria =  BigDecimal.ZERO;
     
+
+
+    private String machineName;
     
 }

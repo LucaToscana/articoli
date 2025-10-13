@@ -1,21 +1,28 @@
 package com.gestione.articoli.service.imp;
 
+import com.gestione.articoli.dto.ArticoloDto;
 import com.gestione.articoli.dto.ArticoloHierarchyDto;
+import com.gestione.articoli.dto.FastOrderDto;
 import com.gestione.articoli.dto.OrderWithWorksDto;
 import com.gestione.articoli.dto.OrdineArticoloDto;
 import com.gestione.articoli.dto.OrdineDto;
 import com.gestione.articoli.dto.WorkDto;
 import com.gestione.articoli.exception.BusinessException;
 import com.gestione.articoli.mapper.ArticoloHierarchyMapper;
+import com.gestione.articoli.mapper.ArticoloMapper;
+import com.gestione.articoli.mapper.OrdineArticoloMapper;
 import com.gestione.articoli.mapper.OrdineMapper;
+import com.gestione.articoli.model.Articolo;
 import com.gestione.articoli.model.Azienda;
 import com.gestione.articoli.model.Ordine;
 import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.model.WorkActivityType;
 import com.gestione.articoli.model.WorkStatus;
 import com.gestione.articoli.repository.AziendaRepository;
+import com.gestione.articoli.repository.OrdineArticoloRepository;
 import com.gestione.articoli.repository.OrdineRepository;
 import com.gestione.articoli.repository.WorkRepository;
+import com.gestione.articoli.service.ArticoloService;
 import com.gestione.articoli.service.OrdineService;
 import com.gestione.articoli.service.WorkService;
 
@@ -23,9 +30,11 @@ import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.convert.DtoInstantiatingConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,10 +45,12 @@ import java.util.stream.Collectors;
 public class OrdineServiceImpl implements OrdineService {
 
     private final OrdineRepository ordineRepository;
+	private final OrdineArticoloRepository ordineArticoloRepository;
+
     private final OrdineMapper ordineMapper;  
     private final AziendaRepository aziendaRepository;
     private final WorkService workService;
-
+	private final ArticoloService articoloService;
 
     @Override
     public OrdineDto createOrdine(OrdineDto dto) {
@@ -181,4 +192,67 @@ public class OrdineServiceImpl implements OrdineService {
                 .articoli(articoli)
                 .build();
     }
+    @Override
+    @Transactional
+    public ArticoloDto createFastOrder(FastOrderDto dto) {
+        if (dto == null) {
+            throw new RuntimeException("FastOrderDto non può essere nullo");
+        }
+
+        // 1️⃣ Salva articolo tramite servizio e ottieni l'entity
+        ArticoloDto articoloDto = dto.getArticolo();
+        // imposta visibilità e quantità
+        articoloDto.setAttivoPerProduzione(true);
+        // Questo metodo deve ritornare l'entity salvata
+        Articolo savedArticoloEntity = articoloService.saveAndGetEntity(articoloDto);
+
+        // 2️⃣ Crea ordine con entità Azienda
+        Ordine ordine = Ordine.builder()
+                .workStatus(WorkStatus.IN_PROGRESS)
+                .azienda(savedArticoloEntity.getAzienda()) // entity corretta
+                .nomeDocumento(dto.getOrdine() != null ? dto.getOrdine().getNomeDocumento() : "")
+                .hasDdt(dto.getOrdine() != null && dto.getOrdine().isHasDdt())
+                .build();
+
+        ordine = ordineRepository.save(ordine);
+
+        // 3️⃣ Collega articolo all'ordine
+        OrdineArticolo ordineArticolo = OrdineArticolo.builder()
+                .ordine(ordine)
+                .articolo(savedArticoloEntity) // entity corretta
+                .quantita(dto.getQuantita() != null && dto.getQuantita() > 0 ? dto.getQuantita() : 1)
+                .build();
+
+       OrdineArticolo ordineArticoloWork = ordineArticoloRepository.save(ordineArticolo);
+       ArticoloDto newArticle =  ArticoloMapper.toDto(savedArticoloEntity);
+        
+        if(dto.isImmediatelyVisible()) {
+        	LocalDateTime start = LocalDateTime.now();
+        	WorkDto workDisponibilita = new WorkDto();
+        	workDisponibilita.setArticolo(newArticle);
+        	workDisponibilita.setOrdine(ordineMapper.toDto(ordine));
+        	workDisponibilita.setStatus(WorkStatus.IN_PROGRESS.name());
+        	workDisponibilita.setActivity(WorkActivityType.DISPONIBILITA_LAVORAZIONE.name());
+        	workDisponibilita.setOrderArticleId(ordineArticoloWork.getId());
+        	workDisponibilita.setOrdineArticolo(OrdineArticoloMapper.toDto(ordineArticoloWork));
+        	workDisponibilita.setStartTime(start);
+        	workDisponibilita.setOriginalStartTime(start);
+        	workService.createWork(workDisponibilita);
+        	
+        	WorkDto workLotto = new WorkDto();
+        	workLotto.setArticolo(newArticle);
+        	workLotto.setOrdine(ordineMapper.toDto(ordine));
+        	workLotto.setStatus(WorkStatus.IN_PROGRESS.name());
+        	workLotto.setActivity(WorkActivityType.DISPONIBILITA_LOTTO.name());
+        	workLotto.setOrderArticleId(ordineArticoloWork.getId());
+        	workLotto.setQuantita(dto.getQuantita());
+        	workLotto.setOrdineArticolo(OrdineArticoloMapper.toDto(ordineArticoloWork));
+        	workLotto.setStartTime(start);
+        	workLotto.setOriginalStartTime(start);
+        	workService.createWork(workLotto);
+        }
+        return newArticle;
+    }
+
+
 }

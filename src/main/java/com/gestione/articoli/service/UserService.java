@@ -1,8 +1,10 @@
 package com.gestione.articoli.service;
 
+import com.gestione.articoli.dto.InactiveUsersDto;
 import com.gestione.articoli.dto.UserDto;
 import com.gestione.articoli.model.User;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface UserService {
@@ -22,4 +24,22 @@ public interface UserService {
 	UserDto save(UserDto build);
 
 	User getAuthenticatedUser();
+
+	List<UserDto> getAllActiveOperators();
+
+	boolean existsByUsernameIgnoreCase(String normalizedUsername);
+
+	String createAdmin(String username, String password);
+
+	void createOperatorIfNotExists(String username, BigDecimal retribuzioneOraria);
+
+	List<UserDto> getAllInactiveOperators();
+
+	List<UserDto> getAllInactiveUsers();
+
+	InactiveUsersDto getAllInactiveUsersGrouped();
+
+
+	void reactivateUser(Long userId) throws Exception;
+
 }

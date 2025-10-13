@@ -4,6 +4,7 @@ import com.gestione.articoli.model.Work;
 import com.gestione.articoli.model.WorkActivityType;
 import com.gestione.articoli.dto.WorkSummaryProjection;
 import com.gestione.articoli.model.OrdineArticolo;
+import com.gestione.articoli.model.User;
 import com.gestione.articoli.model.WorkStatus;
 
 import jakarta.transaction.Transactional;
@@ -264,5 +265,10 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
     List<Work> findByOrderArticleOrdineIdAndActivityIn(Long ordineId, List<WorkActivityType> activities);
 
     List<Work> findByOrderArticleOrdineIdAndStatusNotIn(Long ordineId, List<WorkStatus> excludedStatuses);
+	boolean existsByOperatorOrOperator2OrOperator3(User operator, User operator2, User operator3);
+	boolean existsByOperatorOrOperator2OrOperator3OrManager(User operator, User operator2, User operator3,
+			User operator4);
+	List<Work> findByOperatorAndStatusAndEndTimeIsNull(User existing,
+			WorkStatus inProgress);
 
 }

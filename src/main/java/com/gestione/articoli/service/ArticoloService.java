@@ -28,4 +28,6 @@ public interface ArticoloService {
 
 	ArticoloHierarchyDto getGerarchia(Long id);
 
+	Articolo saveAndGetEntity(ArticoloDto articoloDto);
+
 }

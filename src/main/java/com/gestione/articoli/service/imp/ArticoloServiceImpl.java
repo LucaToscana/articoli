@@ -60,7 +60,11 @@ public class ArticoloServiceImpl implements ArticoloService {
 
 		return ArticoloMapper.toDto(savedArticolo);
 	}
-
+	@Override
+	public Articolo saveAndGetEntity(ArticoloDto dto) {
+	    Articolo entity = ArticoloMapper.toEntity(dto);
+	    return articoloRepository.save(entity);
+	}
 	// Metodo helper per gestire i figli
 	private void updateFigli(final Articolo articolo, final Set<Long> figliIdsParam) {
 		final Set<Long> nuoviFigliIds = Optional.ofNullable(figliIdsParam).orElse(Collections.emptySet());
