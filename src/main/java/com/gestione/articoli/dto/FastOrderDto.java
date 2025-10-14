@@ -15,4 +15,5 @@ public class FastOrderDto {
 	private OrdineDto ordine; // DTO ordine
 	private Integer quantita;
 	private boolean immediatelyVisible;
+	private boolean fromArticle;
 }

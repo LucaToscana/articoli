@@ -10,5 +10,6 @@ public interface OrdineArticoloRepository extends JpaRepository<OrdineArticolo, 
     // Trova tutti gli articoli di un ordine specifico
     List<OrdineArticolo> findByOrdineId(Long ordineId);
     Optional<OrdineArticolo> findByOrdineIdAndArticoloId(Long ordineId, Long articoloId);
+	void deleteByOrdineId(Long id);
 
 }

@@ -14,4 +14,5 @@ public interface OrdineRisultatoService {
     List<OrdineRisultatoDto> getByOrdineId(Long ordineId);
     void delete(Long id);
 	List<OrdineRisultato> generaRisultatiDaWorks(Long ordineId, BigDecimal prezzo);
+	void deleteByOrdineId(Long ordineId);
 }

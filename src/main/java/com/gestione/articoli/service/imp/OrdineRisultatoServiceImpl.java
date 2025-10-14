@@ -48,6 +48,11 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 	public OrdineRisultatoDto getById(Long id) {
 		return repository.findById(id).map(OrdineRisultatoMapper::toDto).orElse(null);
 	}
+	 @Override
+	    @Transactional
+	    public void deleteByOrdineId(Long ordineId) {
+	        repository.deleteByOrdineId(ordineId);
+	    }
 
 	@Override
 	public List<OrdineRisultatoDto> getAll() {

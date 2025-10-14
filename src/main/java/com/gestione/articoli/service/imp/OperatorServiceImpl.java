@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.gestione.articoli.dto.InactiveUsersDto;
 import com.gestione.articoli.dto.OperatorDto;
+import com.gestione.articoli.model.Role;
 import com.gestione.articoli.model.User;
 import com.gestione.articoli.model.Work;
 import com.gestione.articoli.model.WorkActivityType;
@@ -89,6 +90,14 @@ public class OperatorServiceImpl implements OperatorService {
 					throw new RuntimeException(
 							"Errore durante aggiornamento operatore. Potrebbe essere presente in lavorazioni in corso. In caso prova a chiuderle e riprova.");
 				}
+			}
+			if (existing.getRoles().contains(Role.ADMIN)) {
+			    long adminCount = userRepository.countActiveByRole(Role.ADMIN);
+			    if (adminCount < 5) {
+			        throw new RuntimeException(
+			            "Impossibile disattivare questo admin: nel database devono essere presenti un minimo numero di admin attivi. Creane altri e ritenta."
+			        );
+			    }		
 			}
 		}
 

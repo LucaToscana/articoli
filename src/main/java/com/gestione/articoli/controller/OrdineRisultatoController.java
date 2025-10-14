@@ -49,7 +49,12 @@ public class OrdineRisultatoController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
-
+ // Elimina tutti i risultati di un ordine
+    @DeleteMapping("/ordine/{ordineId}")
+    public ResponseEntity<Void> deleteByOrdine(@PathVariable Long ordineId) {
+        service.deleteByOrdineId(ordineId);
+        return ResponseEntity.noContent().build();
+    }
     @PostMapping("/generate/{ordineId}")
     public ResponseEntity<List<OrdineRisultatoDto>> generaRisultati(
             @PathVariable Long ordineId,

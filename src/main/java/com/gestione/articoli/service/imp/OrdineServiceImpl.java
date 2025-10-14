@@ -18,9 +18,11 @@ import com.gestione.articoli.model.Ordine;
 import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.model.WorkActivityType;
 import com.gestione.articoli.model.WorkStatus;
+import com.gestione.articoli.repository.ArticoloRepository;
 import com.gestione.articoli.repository.AziendaRepository;
 import com.gestione.articoli.repository.OrdineArticoloRepository;
 import com.gestione.articoli.repository.OrdineRepository;
+import com.gestione.articoli.repository.OrdineRisultatoRepository;
 import com.gestione.articoli.repository.WorkRepository;
 import com.gestione.articoli.service.ArticoloService;
 import com.gestione.articoli.service.OrdineService;
@@ -44,215 +46,209 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrdineServiceImpl implements OrdineService {
 
-    private final OrdineRepository ordineRepository;
+	private final OrdineRepository ordineRepository;
 	private final OrdineArticoloRepository ordineArticoloRepository;
-
-    private final OrdineMapper ordineMapper;  
-    private final AziendaRepository aziendaRepository;
-    private final WorkService workService;
+	private final WorkRepository workRepository;
+	private final OrdineRisultatoRepository ordineRisultatoRepository;
+	private final OrdineMapper ordineMapper;
+	private final AziendaRepository aziendaRepository;
+	private final WorkService workService;
 	private final ArticoloService articoloService;
+	private final ArticoloRepository articoloRepository;
 
-    @Override
-    public OrdineDto createOrdine(OrdineDto dto) {
-        Ordine ordine = ordineMapper.toEntity(dto);
-        Ordine saved = ordineRepository.save(ordine);
-        return ordineMapper.toDto(saved);
-    }
+	@Override
+	public OrdineDto createOrdine(OrdineDto dto) {
+		Ordine ordine = ordineMapper.toEntity(dto);
+		Ordine saved = ordineRepository.save(ordine);
+		return ordineMapper.toDto(saved);
+	}
 
-    public List<OrdineDto> getAllOrdini() {
-        return ordineRepository.findAllWithAziendaAndArticoli().stream()
-                .map(ordineMapper::toDto)
-                .collect(Collectors.toList());
-    }
+	public List<OrdineDto> getAllOrdini() {
+		return ordineRepository.findAllWithAziendaAndArticoli().stream().map(ordineMapper::toDto)
+				.collect(Collectors.toList());
+	}
 
-    @Override
-    public OrdineDto getOrdineById(Long id) {
-        return ordineRepository.findById(id)
-                .map(ordineMapper::toDto)
-                .orElse(null);
-    }
+	@Override
+	public OrdineDto getOrdineById(Long id) {
+		return ordineRepository.findById(id).map(ordineMapper::toDto).orElse(null);
+	}
 
-    @Override
-    public OrdineDto updateOrdine(Long id, OrdineDto dto) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-        if (dto != null && dto.getWorkStatus() != null 
-        	    && WorkStatus.COMPLETED.equals(dto.getWorkStatus())) {
+	@Override
+	public OrdineDto updateOrdine(Long id, OrdineDto dto) {
+		Logger logger = LoggerFactory.getLogger(getClass());
+		if (dto != null && dto.getWorkStatus() != null && (WorkStatus.COMPLETED.equals(dto.getWorkStatus())
+				|| WorkStatus.PAUSED.equals(dto.getWorkStatus()))) {
 
-        	List<WorkDto> worksNotCompleted = workService
-        	        .getNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(id);
+			List<WorkDto> worksNotCompleted = workService
+					.getNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(id);
 
-        	    if (!worksNotCompleted.isEmpty()) {
-        	        throw new BusinessException(
-        	            "Impossibile completare l'ordine: ci sono ancora lavorazioni non concluse. "
-        	        );
-        	    }
-        }
-        // Recupera l'ordine dal database
-        Ordine ordine = ordineRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("Ordine non trovato con id {}", id);
-                    return new RuntimeException("Ordine non trovato con id " + id);
-                });
-        // --- Aggiorna campi principali ---
-        ordine.setDataOrdine(dto.getDataOrdine());
-        ordine.setNomeDocumento(dto.getNomeDocumento());
-        ordine.setHasDdt(dto.isHasDdt());
-        logger.info("Campi principali aggiornati: dataOrdine={}, nomeDocumento={}, hasDdt={}",
-                dto.getDataOrdine(), dto.getNomeDocumento(), dto.isHasDdt());
-        if (dto.getWorkStatus() != null) {
-            ordine.setWorkStatus(dto.getWorkStatus());
-            logger.info("Stato lavoro aggiornato: {}", dto.getWorkStatus());
-        }
-        // --- Aggiorna azienda ---
-        if (dto.getAziendaId() != null) {
-            Azienda azienda = aziendaRepository.findById(dto.getAziendaId())
-                    .orElseThrow(() -> {
-                        logger.error("Azienda non trovata con id {}", dto.getAziendaId());
-                        return new RuntimeException("Azienda non trovata: " + dto.getAziendaId());
-                    });
-            ordine.setAzienda(azienda);
-            logger.info("Azienda aggiornata: {}", azienda.getNome());
-        } else {
-            logger.info("Nessuna modifica all'azienda");
-        }
+			if (!worksNotCompleted.isEmpty()) {
+				throw new BusinessException(
+						"Impossibile modificare lo stato dell'ordine: ci sono ancora lavorazioni non concluse. ");
+			}
+		}
+		// Recupera l'ordine dal database
+		Ordine ordine = ordineRepository.findById(id).orElseThrow(() -> {
+			logger.error("Ordine non trovato con id {}", id);
+			return new RuntimeException("Ordine non trovato con id " + id);
+		});
+		// --- Aggiorna campi principali ---
+		ordine.setDataOrdine(dto.getDataOrdine());
+		ordine.setNomeDocumento(dto.getNomeDocumento());
+		ordine.setHasDdt(dto.isHasDdt());
+		logger.info("Campi principali aggiornati: dataOrdine={}, nomeDocumento={}, hasDdt={}", dto.getDataOrdine(),
+				dto.getNomeDocumento(), dto.isHasDdt());
+		if (dto.getWorkStatus() != null) {
+			ordine.setWorkStatus(dto.getWorkStatus());
+			logger.info("Stato lavoro aggiornato: {}", dto.getWorkStatus());
+		}
+		// --- Aggiorna azienda ---
+		if (dto.getAziendaId() != null) {
+			Azienda azienda = aziendaRepository.findById(dto.getAziendaId()).orElseThrow(() -> {
+				logger.error("Azienda non trovata con id {}", dto.getAziendaId());
+				return new RuntimeException("Azienda non trovata: " + dto.getAziendaId());
+			});
+			ordine.setAzienda(azienda);
+			logger.info("Azienda aggiornata: {}", azienda.getNome());
+		} else {
+			logger.info("Nessuna modifica all'azienda");
+		}
 
-        // --- Aggiorna quantità articoli ---
-        if (dto.getArticoli() != null && !dto.getArticoli().isEmpty()) {
-            for (OrdineArticoloDto articoloDto : dto.getArticoli()) {
-                OrdineArticolo ordineArticolo = ordine.getArticoli().stream()
-                        .filter(a -> a.getId().equals(articoloDto.getId()))
-                        .findFirst()
-                        .orElseThrow(() -> new RuntimeException(
-                                "Articolo ordine non trovato: " + articoloDto.getId()));
+		// --- Aggiorna quantità articoli ---
+		if (dto.getArticoli() != null && !dto.getArticoli().isEmpty()) {
+			for (OrdineArticoloDto articoloDto : dto.getArticoli()) {
+				OrdineArticolo ordineArticolo = ordine.getArticoli().stream()
+						.filter(a -> a.getId().equals(articoloDto.getId())).findFirst()
+						.orElseThrow(() -> new RuntimeException("Articolo ordine non trovato: " + articoloDto.getId()));
 
-                ordineArticolo.setQuantita(articoloDto.getQuantita());
-            }
-        }
+				ordineArticolo.setQuantita(articoloDto.getQuantita());
+			}
+		}
 
-        // Salva l'ordine aggiornato
-        ordineRepository.save(ordine);
-        
-        if(WorkStatus.COMPLETED.equals(dto.getWorkStatus())) {
-        	workService.cleanCompletedOrderWorks(id);
-        }
-        
-        logger.info("Ordine salvato con successo: {}", ordine.getId());
+		// Salva l'ordine aggiornato
+		ordineRepository.save(ordine);
 
-        // Converte in DTO e restituisce
-        OrdineDto resultDto = ordineMapper.toDto(ordine);
-        logger.info("OrdineDto restituito: {}", resultDto);
+		if (WorkStatus.COMPLETED.equals(dto.getWorkStatus())) {
+			workService.cleanCompletedOrderWorks(id);
+		}
 
-        return resultDto;
-    }
+		logger.info("Ordine salvato con successo: {}", ordine.getId());
 
-    
-    @Override
-    public void deleteOrdine(Long id) {
-        ordineRepository.deleteById(id);
-    }
-    @Override
-    public List<ArticoloHierarchyDto> getGerarchiaArticoliByOrdineId(Long ordineId) {
-        Ordine ordine = ordineRepository.findById(ordineId)
-                .orElseThrow(() -> new RuntimeException("Ordine non trovato"));
+		// Converte in DTO e restituisce
+		OrdineDto resultDto = ordineMapper.toDto(ordine);
+		logger.info("OrdineDto restituito: {}", resultDto);
 
-        return ordine.getArticoli()
-                .stream()
-                // Ordinamento stabile per ID
-                .sorted(Comparator.comparing(OrdineArticolo::getId))
-                .map(oa -> {
-                    ArticoloHierarchyDto dto = ArticoloHierarchyMapper.toHierarchyDto(oa.getArticolo());
-                    dto.setArticoloOrdine(oa.getId());
-                    return dto;
-                })
-                .collect(Collectors.toList());
-    }
-    public OrderWithWorksDto getOrderWithWorks(Long ordineId) {
-        Ordine ordine = ordineRepository.findById(ordineId)
-                .orElseThrow(() -> new RuntimeException("Ordine non trovato"));
+		return resultDto;
+	}
 
-        List<OrderWithWorksDto.OrderArticleWithWorks> articoli = ordine.getArticoli().stream()
-            .map(oa -> OrderWithWorksDto.OrderArticleWithWorks.builder()
-                    .id(oa.getId())
-                    .articoloId(oa.getArticolo().getId())
-                    .codice(oa.getArticolo().getCodice())
-                    .descrizione(oa.getArticolo().getDescrizione())
-                    .quantita(oa.getQuantita())
-                    .works(workService.getWorksByOrderArticleId(oa.getId())) // recupero WorkDto dal service
-                    .build()
-            ).collect(Collectors.toList());
+	@Override
+	@Transactional
+	public void deleteOrdine(Long id) {
+		Ordine ordine = ordineRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Ordine non trovato con ID: " + id));
 
-        return OrderWithWorksDto.builder()
-                .id(ordine.getId())
-                .dataOrdine(ordine.getDataOrdine())
-                .hasDdt(ordine.isHasDdt())
-                .nomeDocumento(ordine.getNomeDocumento())
-                .workStatus(ordine.getWorkStatus().name())
-                .aziendaId(ordine.getAzienda().getId())
-                .aziendaNome(ordine.getAzienda().getNome())
-                .articoli(articoli)
-                .build();
-    }
-    @Override
-    @Transactional
-    public ArticoloDto createFastOrder(FastOrderDto dto) {
-        if (dto == null) {
-            throw new RuntimeException("FastOrderDto non può essere nullo");
-        }
+		// 🔹 Elimina prima tutte le entità figlie collegate
+		ordineRisultatoRepository.deleteByOrdineId(id);
+		workRepository.deleteByOrderArticle_Ordine_Id(id);
+		ordineArticoloRepository.deleteByOrdineId(id);
 
-        // 1️⃣ Salva articolo tramite servizio e ottieni l'entity
-        ArticoloDto articoloDto = dto.getArticolo();
-        // imposta visibilità e quantità
-        articoloDto.setAttivoPerProduzione(true);
-        // Questo metodo deve ritornare l'entity salvata
-        Articolo savedArticoloEntity = articoloService.saveAndGetEntity(articoloDto);
+		// 🔹 Poi elimina l’ordine
+		ordineRepository.deleteById(ordine.getId());
+	}
 
-        // 2️⃣ Crea ordine con entità Azienda
-        Ordine ordine = Ordine.builder()
-                .workStatus(WorkStatus.IN_PROGRESS)
-                .azienda(savedArticoloEntity.getAzienda()) // entity corretta
-                .nomeDocumento(dto.getOrdine() != null ? dto.getOrdine().getNomeDocumento() : "")
-                .hasDdt(dto.getOrdine() != null && dto.getOrdine().isHasDdt())
-                .build();
+	@Override
+	public List<ArticoloHierarchyDto> getGerarchiaArticoliByOrdineId(Long ordineId) {
+		Ordine ordine = ordineRepository.findById(ordineId)
+				.orElseThrow(() -> new RuntimeException("Ordine non trovato"));
 
-        ordine = ordineRepository.save(ordine);
+		return ordine.getArticoli().stream()
+				// Ordinamento stabile per ID
+				.sorted(Comparator.comparing(OrdineArticolo::getId)).map(oa -> {
+					ArticoloHierarchyDto dto = ArticoloHierarchyMapper.toHierarchyDto(oa.getArticolo());
+					dto.setArticoloOrdine(oa.getId());
+					return dto;
+				}).collect(Collectors.toList());
+	}
 
-        // 3️⃣ Collega articolo all'ordine
-        OrdineArticolo ordineArticolo = OrdineArticolo.builder()
-                .ordine(ordine)
-                .articolo(savedArticoloEntity) // entity corretta
-                .quantita(dto.getQuantita() != null && dto.getQuantita() > 0 ? dto.getQuantita() : 1)
-                .build();
+	public OrderWithWorksDto getOrderWithWorks(Long ordineId) {
+		Ordine ordine = ordineRepository.findById(ordineId)
+				.orElseThrow(() -> new RuntimeException("Ordine non trovato"));
 
-       OrdineArticolo ordineArticoloWork = ordineArticoloRepository.save(ordineArticolo);
-       ArticoloDto newArticle =  ArticoloMapper.toDto(savedArticoloEntity);
-        
-        if(dto.isImmediatelyVisible()) {
-        	LocalDateTime start = LocalDateTime.now();
-        	WorkDto workDisponibilita = new WorkDto();
-        	workDisponibilita.setArticolo(newArticle);
-        	workDisponibilita.setOrdine(ordineMapper.toDto(ordine));
-        	workDisponibilita.setStatus(WorkStatus.IN_PROGRESS.name());
-        	workDisponibilita.setActivity(WorkActivityType.DISPONIBILITA_LAVORAZIONE.name());
-        	workDisponibilita.setOrderArticleId(ordineArticoloWork.getId());
-        	workDisponibilita.setOrdineArticolo(OrdineArticoloMapper.toDto(ordineArticoloWork));
-        	workDisponibilita.setStartTime(start);
-        	workDisponibilita.setOriginalStartTime(start);
-        	workService.createWork(workDisponibilita);
-        	
-        	WorkDto workLotto = new WorkDto();
-        	workLotto.setArticolo(newArticle);
-        	workLotto.setOrdine(ordineMapper.toDto(ordine));
-        	workLotto.setStatus(WorkStatus.IN_PROGRESS.name());
-        	workLotto.setActivity(WorkActivityType.DISPONIBILITA_LOTTO.name());
-        	workLotto.setOrderArticleId(ordineArticoloWork.getId());
-        	workLotto.setQuantita(dto.getQuantita());
-        	workLotto.setOrdineArticolo(OrdineArticoloMapper.toDto(ordineArticoloWork));
-        	workLotto.setStartTime(start);
-        	workLotto.setOriginalStartTime(start);
-        	workService.createWork(workLotto);
-        }
-        return newArticle;
-    }
+		List<OrderWithWorksDto.OrderArticleWithWorks> articoli = ordine.getArticoli().stream()
+				.map(oa -> OrderWithWorksDto.OrderArticleWithWorks.builder().id(oa.getId())
+						.articoloId(oa.getArticolo().getId()).codice(oa.getArticolo().getCodice())
+						.descrizione(oa.getArticolo().getDescrizione()).quantita(oa.getQuantita())
+						.works(workService.getWorksByOrderArticleId(oa.getId())) // recupero WorkDto dal service
+						.build())
+				.collect(Collectors.toList());
 
+		return OrderWithWorksDto.builder().id(ordine.getId()).dataOrdine(ordine.getDataOrdine())
+				.hasDdt(ordine.isHasDdt()).nomeDocumento(ordine.getNomeDocumento())
+				.workStatus(ordine.getWorkStatus().name()).aziendaId(ordine.getAzienda().getId())
+				.aziendaNome(ordine.getAzienda().getNome()).articoli(articoli).build();
+	}
+
+	@Override
+	@Transactional
+	public ArticoloDto createFastOrder(FastOrderDto dto) {
+		if (dto == null) {
+			throw new RuntimeException("FastOrderDto non può essere nullo");
+		}
+		ArticoloDto articoloDto = dto.getArticolo();
+		Articolo savedArticoloEntity = new Articolo();
+		if (dto.getArticolo() != null && dto.getArticolo().getId() != null && dto.isFromArticle()) {
+			savedArticoloEntity = articoloRepository.findById(dto.getArticolo().getId()).orElse(new Articolo()); // oppure																											// lanci// un'eccezione
+		} else {
+			// 1️⃣ Salva articolo tramite servizio e ottieni l'entity
+			// imposta visibilità e quantità
+			articoloDto.setAttivoPerProduzione(true);
+			articoloDto.setDescrizione(dto.getOrdine().getNomeDocumento());
+			// Questo metodo deve ritornare l'entity salvata
+			savedArticoloEntity = articoloService.saveAndGetEntity(articoloDto);
+		}
+
+		// 2️⃣ Crea ordine con entità Azienda
+		Ordine ordine = Ordine.builder().workStatus(WorkStatus.IN_PROGRESS).azienda(savedArticoloEntity.getAzienda()) // entity
+																														// corretta
+				.nomeDocumento(dto.getOrdine() != null ? dto.getOrdine().getNomeDocumento() : "")
+				.hasDdt(dto.getOrdine() != null && dto.getOrdine().isHasDdt()).build();
+
+		ordine = ordineRepository.save(ordine);
+
+		// 3️⃣ Collega articolo all'ordine
+		OrdineArticolo ordineArticolo = OrdineArticolo.builder().ordine(ordine).articolo(savedArticoloEntity) // entity
+																												// corretta
+				.quantita(dto.getQuantita() != null && dto.getQuantita() > 0 ? dto.getQuantita() : 1).build();
+
+		OrdineArticolo ordineArticoloWork = ordineArticoloRepository.save(ordineArticolo);
+		ArticoloDto newArticle = ArticoloMapper.toDto(savedArticoloEntity);
+
+		if (dto.isImmediatelyVisible()) {
+			LocalDateTime start = LocalDateTime.now();
+			WorkDto workDisponibilita = new WorkDto();
+			workDisponibilita.setArticolo(newArticle);
+			workDisponibilita.setOrdine(ordineMapper.toDto(ordine));
+			workDisponibilita.setStatus(WorkStatus.IN_PROGRESS.name());
+			workDisponibilita.setActivity(WorkActivityType.DISPONIBILITA_LAVORAZIONE.name());
+			workDisponibilita.setOrderArticleId(ordineArticoloWork.getId());
+			workDisponibilita.setOrdineArticolo(OrdineArticoloMapper.toDto(ordineArticoloWork));
+			workDisponibilita.setStartTime(start);
+			workDisponibilita.setOriginalStartTime(start);
+			workService.createWork(workDisponibilita);
+
+			WorkDto workLotto = new WorkDto();
+			workLotto.setArticolo(newArticle);
+			workLotto.setOrdine(ordineMapper.toDto(ordine));
+			workLotto.setStatus(WorkStatus.IN_PROGRESS.name());
+			workLotto.setActivity(WorkActivityType.DISPONIBILITA_LOTTO.name());
+			workLotto.setOrderArticleId(ordineArticoloWork.getId());
+			workLotto.setQuantita(dto.getQuantita());
+			workLotto.setOrdineArticolo(OrdineArticoloMapper.toDto(ordineArticoloWork));
+			workLotto.setStartTime(start);
+			workLotto.setOriginalStartTime(start);
+			workService.createWork(workLotto);
+		}
+		return newArticle;
+	}
 
 }

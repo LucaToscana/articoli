@@ -4,6 +4,7 @@ import com.gestione.articoli.dto.StartWorkDto;
 import com.gestione.articoli.dto.TotalWorkTimeDto;
 import com.gestione.articoli.dto.UserDto;
 import com.gestione.articoli.dto.WorkDto;
+import com.gestione.articoli.dto.WorkIdPosizioneProjection;
 import com.gestione.articoli.dto.WorkSummaryProjection;
 import com.gestione.articoli.mapper.WorkMapper;
 import com.gestione.articoli.model.*;
@@ -131,9 +132,30 @@ public class WorkServiceImpl implements WorkService {
 		operatorWork
 				.setStatus(WorkActivityType.DISPONIBILITA_LOTTO.name().equals(dto.getLavorazione()) ? WorkStatus.PAUSED
 						: WorkStatus.IN_PROGRESS);
-		LocalDateTime originalStartTime = LocalDateTime.now();
-		operatorWork.setOriginalStartTime(originalStartTime);
-		operatorWork.setStartTime(originalStartTime);
+
+		if (null != dto.getStartTime() && null != dto.getEndTime()) {
+
+			LocalDateTime start = dto.getStartTime();
+			LocalDateTime end = dto.getEndTime();
+
+// Ottieni millisecondi correnti
+			int currentMillis = (int) (System.currentTimeMillis() % 1000);
+			int currentNano = currentMillis * 1_000_000; // converti millisecondi in nanosecondi
+
+// Aggiorna startTime e endTime con i millisecondi correnti
+			dto.setStartTime(start.withNano(currentNano));
+			dto.setEndTime(end.withNano(currentNano));
+
+// Aggiorna operatorWork
+			operatorWork.setOriginalStartTime(dto.getStartTime());
+			operatorWork.setStartTime(dto.getStartTime());
+			operatorWork.setEndTime(dto.getEndTime());
+
+		} else {
+			LocalDateTime originalStartTime = LocalDateTime.now();
+			operatorWork.setOriginalStartTime(originalStartTime);
+			operatorWork.setStartTime(originalStartTime);
+		}
 		workRepository.save(operatorWork);
 		return WorkMapper.toDto(operatorWork);
 	}
@@ -164,34 +186,33 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public WorkDto updateWork(Long id, WorkDto dto) {
-	    Work work = workRepository.findById(id)
-	            .orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
+		Work work = workRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
 
-	    // Aggiorna lo stato principale
-	    if (dto.getStatus() != null) {
-	        WorkStatus newStatus = WorkStatus.valueOf(dto.getStatus());
-	        work.setStatus(newStatus);
+		// Aggiorna lo stato principale
+		if (dto.getStatus() != null) {
+			WorkStatus newStatus = WorkStatus.valueOf(dto.getStatus());
+			work.setStatus(newStatus);
 
-	        // Se è DISPONIBILITA_LAVORAZIONE aggiorna anche i lavori DISPONIBILITA_LOTTO
-	        if (work.getActivity() == WorkActivityType.DISPONIBILITA_LAVORAZIONE &&
-	            (newStatus == WorkStatus.PAUSED || newStatus == WorkStatus.COMPLETED)) {
+			// Se è DISPONIBILITA_LAVORAZIONE aggiorna anche i lavori DISPONIBILITA_LOTTO
+			if (work.getActivity() == WorkActivityType.DISPONIBILITA_LAVORAZIONE
+					&& (newStatus == WorkStatus.PAUSED || newStatus == WorkStatus.COMPLETED)) {
 
-	            List<Work> lottoWorks = workRepository.findByOrderArticleAndActivity(
-	                    work.getOrderArticle(), WorkActivityType.DISPONIBILITA_LOTTO);
+				List<Work> lottoWorks = workRepository.findByOrderArticleAndActivity(work.getOrderArticle(),
+						WorkActivityType.DISPONIBILITA_LOTTO);
 
-	            for (Work lottoWork : lottoWorks) {
-	                lottoWork.setStatus(newStatus);
-	                workRepository.save(lottoWork);
-	            }
-	        }
-	    }
+				for (Work lottoWork : lottoWorks) {
+					lottoWork.setStatus(newStatus);
+					workRepository.save(lottoWork);
+				}
+			}
+		}
 
-	    work.setStartTime(dto.getStartTime());
-	    work.setEndTime(dto.getEndTime());
+		work.setStartTime(dto.getStartTime());
+		work.setEndTime(dto.getEndTime());
 
-	    return WorkMapper.toDto(workRepository.save(work));
+		return WorkMapper.toDto(workRepository.save(work));
 	}
-
 
 	/**
 	 * Cancella un Work.
@@ -204,29 +225,28 @@ public class WorkServiceImpl implements WorkService {
 			throw new RuntimeException("Work non trovato con id " + id);
 		workRepository.deleteById(id);
 	}
-	
+
 	@Transactional
 	public void cleanCompletedOrderWorks(Long orderId) {
-	    List<WorkActivityType> activitiesToDelete = List.of(
-	        WorkActivityType.DISPONIBILITA_LOTTO,
-	        WorkActivityType.DISPONIBILITA_LAVORAZIONE
-	    );
+		List<WorkActivityType> activitiesToDelete = List.of(WorkActivityType.DISPONIBILITA_LOTTO,
+				WorkActivityType.DISPONIBILITA_LAVORAZIONE);
 
-	    // 1️⃣ Recupera i Work da cancellare
-	    List<Work> worksToDelete = workRepository.findByOrderArticleOrdineIdAndActivityIn(orderId, activitiesToDelete);
+		// 1️⃣ Recupera i Work da cancellare
+		List<Work> worksToDelete = workRepository.findByOrderArticleOrdineIdAndActivityIn(orderId, activitiesToDelete);
 
-	    // 2️⃣ Cancella uno ad uno
-	    for (Work w : worksToDelete) {
-	        workRepository.delete(w);
-	    }
+		// 2️⃣ Cancella uno ad uno
+		for (Work w : worksToDelete) {
+			workRepository.delete(w);
+		}
 
-	    // 3️⃣ Eventuale secondo delete, escludendo alcuni status
-	    List<WorkStatus> excludedStatuses = List.of(WorkStatus.IN_PROGRESS);
-	    List<Work> worksToDelete2 = workRepository.findByOrderArticleOrdineIdAndStatusNotIn(orderId, excludedStatuses);
-	    for (Work w : worksToDelete2) {
-	        workRepository.delete(w);
-	    }
+		// 3️⃣ Eventuale secondo delete, escludendo alcuni status
+		List<WorkStatus> excludedStatuses = List.of(WorkStatus.IN_PROGRESS);
+		List<Work> worksToDelete2 = workRepository.findByOrderArticleOrdineIdAndStatusNotIn(orderId, excludedStatuses);
+		for (Work w : worksToDelete2) {
+			workRepository.delete(w);
+		}
 	}
+
 	/**
 	 * Recupera un Work per ID.
 	 *
@@ -318,8 +338,10 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public List<WorkDto> getInProgressLottoWorksWithOrderInProgress() {
-		return workRepository.findInProgressLottoWorksWithOrderInProgress().stream().map(WorkMapper::toDto).collect(Collectors.toList());
+		return workRepository.findInProgressLottoWorksWithOrderInProgress().stream().map(WorkMapper::toDto)
+				.collect(Collectors.toList());
 	}
+
 	/**
 	 * Recupera tutti i lavori lotto.
 	 *
@@ -342,55 +364,75 @@ public class WorkServiceImpl implements WorkService {
 						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()))
 				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
 	}
-	
+
 	@Override
 	public List<WorkDto> getManualWorksWithTotalMinutesByOrderInProgress(Long orderId) {
-	    List<WorkSummaryProjection> summaries = workRepository
-	        .findActiveManualWorksWithTotalMinutesByOrderInProgressExcludingActivities(
-	            List.of(
-	                WorkActivityType.DISPONIBILITA_LOTTO.name(),
-	                WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
-	            ),
-	            orderId
-	        );
+		List<WorkSummaryProjection> summaries = workRepository
+				.findActiveManualWorksWithTotalMinutesByOrderInProgressExcludingActivities(
+						List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
+								WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()),
+						orderId);
 
-	    return summaries.stream()
-	        .map(WorkMapper::workSummaryProjectionToDto) // usa il tuo metodo
-	        .toList();
+		return summaries.stream().map(WorkMapper::workSummaryProjectionToDto) // usa il tuo metodo
+				.toList();
 	}
+
 	@Override
 	public List<WorkDto> getManualWorksWithTotalMinutesByOrder(Long orderId) {
+	    // 1️⃣ Recupera i summary principali con minuti totali
 	    List<WorkSummaryProjection> summaries = workRepository
-		        .findActiveManualWorksWithTotalMinutesByOrderExcludingActivities(
-		            List.of(
-		                WorkActivityType.DISPONIBILITA_LOTTO.name(),
-		                WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
-		            ),
-		            orderId
-		        );
+	            .findActiveManualWorksWithTotalMinutesByOrderExcludingActivities(
+	                    List.of(
+	                        WorkActivityType.DISPONIBILITA_LOTTO.name(),
+	                        WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
+	                    ),
+	                    orderId
+	            );
 
-		    return summaries.stream()
-		        .map(WorkMapper::workSummaryProjectionToDto) // usa il tuo metodo
-		        .toList();
+	    // 2️⃣ Estrai tutti gli ID dei lavori
+	    List<Long> workIds = summaries.stream()
+	                                  .map(WorkSummaryProjection::getId)
+	                                  .toList();
+
+	    // 3️⃣ Recupera tutte le posizioni in un’unica query
+	    List<WorkIdPosizioneProjection> positions = workRepository.findPosizioniByWorkIds(workIds);
+
+	    // 4️⃣ Raggruppa per workId
+	    Map<Long, List<String>> posizioniMap = positions.stream()
+	            .collect(Collectors.groupingBy(
+	                WorkIdPosizioneProjection::getWorkId,
+	                Collectors.mapping(WorkIdPosizioneProjection::getPosizione, Collectors.toList())
+	            ));
+
+	    // 5️⃣ Mappa i summary nei DTO e assegna le posizioni
+	    return summaries.stream()
+	            .map(summary -> {
+	                WorkDto dto = WorkMapper.workSummaryProjectionToDto(summary);
+	                dto.setPosizioni(posizioniMap.getOrDefault(summary.getId(), List.of()));
+	                return dto;
+	            })
+	            .toList();
 	}
+
+
 	@Override
 	public List<WorkDto> getInProgressManualByOrder(Long id) {
 		return workRepository
 				.findInProgressManualWorksExcludedActivitiesByOrder(List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
-						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()),id)
+						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()), id)
 				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
 	}
-	
+
 	@Override
 	public List<WorkDto> getNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(Long id) {
-		return workRepository.findNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
-						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()),id)
+		return workRepository
+				.findNotCompletedManualWorksExcludedActivitiesByOrderWithAllStatus(
+						List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
+								WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()),
+						id)
 				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
 	}
-	
 
-	
-	
 	/**
 	 * Esegue la transizione di un Work chiudendo quello corrente e creando un nuovo
 	 * Work.
@@ -507,56 +549,49 @@ public class WorkServiceImpl implements WorkService {
 	@Override
 	public WorkDto updateLottoWork(Long id, WorkDto dto) {
 
-	    Work work = workRepository.findById(id)
-	            .orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
+		Work work = workRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Work non trovato con id " + id));
 
-	    WorkStatus newStatus = dto.getStatus() != null
-	            ? WorkStatus.valueOf(dto.getStatus())
-	            : work.getStatus();
+		WorkStatus newStatus = dto.getStatus() != null ? WorkStatus.valueOf(dto.getStatus()) : work.getStatus();
 
-	    // ✅ Se la lavorazione è di tipo DISPONIBILITA_LAVORAZIONE,
-	    //    e si vuole impostare IN_PROGRESS ma la lavorazione principale è in pausa o completata
-	    if (work.getActivity() == WorkActivityType.DISPONIBILITA_LOTTO
-	            ) {
+		// ✅ Se la lavorazione è di tipo DISPONIBILITA_LAVORAZIONE,
+		// e si vuole impostare IN_PROGRESS ma la lavorazione principale è in pausa o
+		// completata
+		if (work.getActivity() == WorkActivityType.DISPONIBILITA_LOTTO) {
 
-	        // Recupera la lavorazione principale associata all’ordine/articolo
-	        List<Work> mainWorks = workRepository.findByOrderArticleAndActivity(
-	                work.getOrderArticle(),
-	                WorkActivityType.DISPONIBILITA_LAVORAZIONE
-	        );
+			// Recupera la lavorazione principale associata all’ordine/articolo
+			List<Work> mainWorks = workRepository.findByOrderArticleAndActivity(work.getOrderArticle(),
+					WorkActivityType.DISPONIBILITA_LAVORAZIONE);
 
-	        if (!mainWorks.isEmpty()) {
-	            Work mainWork = mainWorks.get(0); // in genere una sola lavorazione principale
+			if (!mainWorks.isEmpty()) {
+				Work mainWork = mainWorks.get(0); // in genere una sola lavorazione principale
 
-	            if (mainWork.getStatus() == WorkStatus.PAUSED || mainWork.getStatus() == WorkStatus.COMPLETED) {
-	                throw new IllegalStateException(
-	                        String.format(
-	                            "Impossibile mettere in corso la disponibilità di lavorazione: la lavorazione principale è attualmente %s.",
-	                            mainWork.getStatus() == WorkStatus.PAUSED ? "in pausa" : "completata"
-	                        )
-	                );
-	            }
-	        }
-	    }
+				if (mainWork.getStatus() == WorkStatus.PAUSED || mainWork.getStatus() == WorkStatus.COMPLETED) {
+					throw new IllegalStateException(String.format(
+							"Impossibile mettere in corso la disponibilità di lavorazione: la lavorazione principale è attualmente %s.",
+							mainWork.getStatus() == WorkStatus.PAUSED ? "in pausa" : "completata"));
+				}
+			}
+		}
 
-	    work.setStatus(newStatus);
-	    work.setQuantita(dto.getQuantita());
+		work.setStatus(newStatus);
+		work.setQuantita(dto.getQuantita());
 
-	    // Operatori (lookup se presente ID)
-	    work.setOperator(dto.getOperator() != null && dto.getOperator().getId() != null
-	            ? userRepository.findById(dto.getOperator().getId()).orElse(null)
-	            : null);
+		// Operatori (lookup se presente ID)
+		work.setOperator(dto.getOperator() != null && dto.getOperator().getId() != null
+				? userRepository.findById(dto.getOperator().getId()).orElse(null)
+				: null);
 
-	    work.setOperator2(dto.getOperator2() != null && dto.getOperator2().getId() != null
-	            ? userRepository.findById(dto.getOperator2().getId()).orElse(null)
-	            : null);
+		work.setOperator2(dto.getOperator2() != null && dto.getOperator2().getId() != null
+				? userRepository.findById(dto.getOperator2().getId()).orElse(null)
+				: null);
 
-	    work.setOperator3(dto.getOperator3() != null && dto.getOperator3().getId() != null
-	            ? userRepository.findById(dto.getOperator3().getId()).orElse(null)
-	            : null);
+		work.setOperator3(dto.getOperator3() != null && dto.getOperator3().getId() != null
+				? userRepository.findById(dto.getOperator3().getId()).orElse(null)
+				: null);
 
-	    Work newWork = workRepository.save(work);
-	    return WorkMapper.toDto(newWork);
+		Work newWork = workRepository.save(work);
+		return WorkMapper.toDto(newWork);
 	}
 
 	/**
@@ -600,18 +635,18 @@ public class WorkServiceImpl implements WorkService {
 		}
 	}
 
-
-
 	private BigDecimal toBigDecimal(Object obj) {
-	    if (obj == null) return BigDecimal.ZERO;
-	    if (obj instanceof BigDecimal) return (BigDecimal) obj;
-	    if (obj instanceof Double) return BigDecimal.valueOf((Double) obj);
-	    try {
-	        return new BigDecimal(obj.toString());
-	    } catch (Exception e) {
-	        return BigDecimal.ZERO;
-	    }
+		if (obj == null)
+			return BigDecimal.ZERO;
+		if (obj instanceof BigDecimal)
+			return (BigDecimal) obj;
+		if (obj instanceof Double)
+			return BigDecimal.valueOf((Double) obj);
+		try {
+			return new BigDecimal(obj.toString());
+		} catch (Exception e) {
+			return BigDecimal.ZERO;
+		}
 	}
-
 
 }

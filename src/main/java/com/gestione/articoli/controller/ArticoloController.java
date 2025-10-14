@@ -2,6 +2,7 @@ package com.gestione.articoli.controller;
 
 import com.gestione.articoli.dto.ArticoloDto;
 import com.gestione.articoli.dto.ArticoloHierarchyDto;
+import com.gestione.articoli.dto.ArticoloOrdersDto;
 import com.gestione.articoli.mapper.ArticoloMapper;
 import com.gestione.articoli.model.Articolo;
 import com.gestione.articoli.repository.ArticoloRepository;
@@ -118,6 +119,11 @@ public class ArticoloController {
 	    } catch (Exception e) {
 	        return ResponseEntity.status(500).body(null);
 	    }
+	}
+	@GetMapping("/{id}/ordini")
+	public ResponseEntity<ArticoloOrdersDto> getOrdiniPerArticolo(@PathVariable Long id) {
+	    ArticoloOrdersDto dto = articoloService.getOrdiniPerArticolo(id);
+	    return ResponseEntity.ok(dto);
 	}
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<String> handleError(Exception e) {

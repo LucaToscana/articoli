@@ -2,10 +2,14 @@ package com.gestione.articoli.service.imp;
 
 import com.gestione.articoli.dto.ArticoloDto;
 import com.gestione.articoli.dto.ArticoloHierarchyDto;
+import com.gestione.articoli.dto.ArticoloOrdersDto;
+import com.gestione.articoli.dto.OrdineDto;
 import com.gestione.articoli.mapper.ArticoloHierarchyMapper;
 import com.gestione.articoli.mapper.ArticoloMapper;
 import com.gestione.articoli.mapper.AziendaMapper;
 import com.gestione.articoli.model.Articolo;
+import com.gestione.articoli.model.Ordine;
+import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.repository.ArticoloRepository;
 import com.gestione.articoli.service.ArticoloService;
 
@@ -187,4 +191,47 @@ public class ArticoloServiceImpl implements ArticoloService {
                 .map(ArticoloMapper::toDto)
                 .collect(Collectors.toList());
     }
+    @Override
+    @Transactional(readOnly = true)
+    public ArticoloOrdersDto getOrdiniPerArticolo(Long articoloId) {
+        Articolo articolo = articoloRepository.findById(articoloId)
+                .orElseThrow(() -> new RuntimeException("Articolo non trovato: " + articoloId));
+
+        Map<Long, OrdineDto> ordiniPadreMap = new LinkedHashMap<>();
+        Map<Long, OrdineDto> ordiniFiglioMap = new LinkedHashMap<>();
+
+        for (OrdineArticolo articoloOrdine : articolo.getOrdini()) {
+            Ordine ordine = articoloOrdine.getOrdine();
+            ordiniPadreMap.putIfAbsent(ordine.getId(), mapOrdineToDto(ordine, articoloId, false));
+        }
+
+        for (Articolo figlio : articolo.getArticoliFigli()) {
+            for (OrdineArticolo articoloOrdine : figlio.getOrdini()) {
+                Ordine ordine = articoloOrdine.getOrdine();
+                ordiniFiglioMap.putIfAbsent(ordine.getId(), mapOrdineToDto(ordine, articoloId, true));
+            }
+        }
+
+        return ArticoloOrdersDto.builder()
+                .ordiniComePadre(new ArrayList<>(ordiniPadreMap.values()))
+                .ordiniComeFiglio(new ArrayList<>(ordiniFiglioMap.values()))
+                .build();
+    }
+
+
+    /**
+     * Mappa un ordine in OrdineDto segnando esplicitamente se l'articoloId è padre o figlio
+     */
+    private OrdineDto mapOrdineToDto(Ordine ordine, Long articoloId, boolean isPadre) {
+        return OrdineDto.builder()
+                .id(ordine.getId())
+                .dataOrdine(ordine.getDataOrdine())
+                .aziendaId(ordine.getAzienda().getId())
+                .nomeAzienda(ordine.getAzienda().getNome())
+                .hasDdt(ordine.isHasDdt())
+                .nomeDocumento(ordine.getNomeDocumento())
+                .workStatus(ordine.getWorkStatus())
+                .build();
+    }
+
 }

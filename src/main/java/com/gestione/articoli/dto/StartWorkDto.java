@@ -1,5 +1,6 @@
 package com.gestione.articoli.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -21,5 +22,6 @@ public class StartWorkDto {
     private String pasta;                  // Colore pasta selezionato
     private List<String> posizione;
     private Integer quantita;
-
+    private LocalDateTime startTime;   // nuova
+    private LocalDateTime endTime;     // nuova
 }

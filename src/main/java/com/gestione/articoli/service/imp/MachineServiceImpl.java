@@ -25,7 +25,7 @@ public class MachineServiceImpl implements MachineService {
 		String normalized = name.trim().toLowerCase();
 
 		if (userRepository.existsByUsernameIgnoreCase(normalized)) {
-			return "Postazione con nome '" + name + "' già esistente";
+			return "Nome '" + name + "' già esistente";
 		}
 
 		User machine = new User();

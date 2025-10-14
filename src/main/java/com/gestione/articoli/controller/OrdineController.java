@@ -16,9 +16,7 @@ import com.gestione.articoli.dto.ArticoloDto;
 import com.gestione.articoli.dto.ArticoloHierarchyDto;
 import com.gestione.articoli.dto.FastOrderDto;
 import com.gestione.articoli.dto.OrdineDto;
-import com.gestione.articoli.dto.WorkDto;
 import com.gestione.articoli.service.OrdineService;
-import com.gestione.articoli.service.WorkService;
 
 @RestController
 @RequestMapping("/api/ordini")

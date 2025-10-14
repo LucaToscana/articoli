@@ -32,6 +32,7 @@ public interface OrdineRisultatoRepository extends JpaRepository<OrdineRisultato
     );
 
 
+    
 }
 
 

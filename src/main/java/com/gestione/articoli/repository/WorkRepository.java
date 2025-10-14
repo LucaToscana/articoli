@@ -2,6 +2,7 @@ package com.gestione.articoli.repository;
 
 import com.gestione.articoli.model.Work;
 import com.gestione.articoli.model.WorkActivityType;
+import com.gestione.articoli.dto.WorkIdPosizioneProjection;
 import com.gestione.articoli.dto.WorkSummaryProjection;
 import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.model.User;
@@ -270,5 +271,14 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 			User operator4);
 	List<Work> findByOperatorAndStatusAndEndTimeIsNull(User existing,
 			WorkStatus inProgress);
+	@Query("SELECT w.id AS workId, wp AS posizione " +
+		       "FROM Work w " +
+		       "JOIN w.posizioni wp " +
+		       "WHERE w.id IN :workIds")
+		List<WorkIdPosizioneProjection> findPosizioniByWorkIds(@Param("workIds") List<Long> workIds);
+	
 
+	@Modifying
+	@Transactional
+	void deleteByOrderArticle_Ordine_Id(Long ordineId);
 }

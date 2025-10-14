@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
 		    long adminCount = userRepository.countActiveByRole(Role.ADMIN);
 		    if (adminCount < 5) {
 		        throw new RuntimeException(
-		            "Impossibile rimuovere questo admin: nel database devono essere presenti admin."
+		            "Impossibile rimuovere questo admin: nel database devono essere presenti un minimo numero di admin."
 		        );
 		    }
 		}
