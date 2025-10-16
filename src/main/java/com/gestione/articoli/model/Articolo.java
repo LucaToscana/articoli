@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -61,7 +63,9 @@ public class Articolo {
 
     @PrePersist
     public void prePersist() {
-        if (this.dataCreazione == null) this.dataCreazione = LocalDateTime.now();
+		LocalDateTime create = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+
+        if (this.dataCreazione == null) this.dataCreazione = create;
         if (this.prezzoIdeale == null) this.prezzoIdeale = BigDecimal.ZERO;
     }
 

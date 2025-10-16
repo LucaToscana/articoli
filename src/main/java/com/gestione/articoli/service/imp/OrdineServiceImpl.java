@@ -37,6 +37,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -224,7 +226,8 @@ public class OrdineServiceImpl implements OrdineService {
 		ArticoloDto newArticle = ArticoloMapper.toDto(savedArticoloEntity);
 
 		if (dto.isImmediatelyVisible()) {
-			LocalDateTime start = LocalDateTime.now();
+			LocalDateTime start = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+
 			WorkDto workDisponibilita = new WorkDto();
 			workDisponibilita.setArticolo(newArticle);
 			workDisponibilita.setOrdine(ordineMapper.toDto(ordine));

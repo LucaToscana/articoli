@@ -15,6 +15,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +37,8 @@ public class StatisticsService {
 		start = start.with(LocalTime.MIN); // 00:00:00
 
 		// Normalizza end a fine giorno
-		LocalDateTime todayEnd = LocalDateTime.now().with(LocalTime.MAX); // oggi 23:59:59.999
+		LocalDateTime todayEnd = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime().with(LocalTime.MAX);;
+
 		if (end.isAfter(todayEnd)) {
 			end = todayEnd;
 		} else {
@@ -96,7 +99,8 @@ public class StatisticsService {
 		start = start.with(LocalTime.MIN); // 00:00:00
 
 		// Normalizza end a fine giorno
-		LocalDateTime todayEnd = LocalDateTime.now().with(LocalTime.MAX); // oggi 23:59:59.999
+		LocalDateTime todayEnd = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime().with(LocalTime.MAX);
+
 		if (end.isAfter(todayEnd)) {
 			end = todayEnd;
 		} else {

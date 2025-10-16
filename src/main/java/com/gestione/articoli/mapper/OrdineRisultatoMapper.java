@@ -5,6 +5,8 @@ import com.gestione.articoli.dto.OrdineRisultatoDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 public class OrdineRisultatoMapper {
 
@@ -42,29 +44,27 @@ public class OrdineRisultatoMapper {
     }
 
     public static OrdineRisultato toEntity(OrdineRisultatoDto dto) {
+        // Prende l'ora corrente in Italia se dataRisultato è null
+        LocalDateTime dataRisultato = dto.getDataRisultato() != null
+                ? dto.getDataRisultato()
+                : ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+
         return OrdineRisultato.builder()
                 .molaturaReale(dto.getMolaturaReale())
                 .molaturaFatturabile(dto.getMolaturaFatturabile())
-
                 .lucidaturaReale(dto.getLucidaturaReale())
                 .lucidaturaFatturabile(dto.getLucidaturaFatturabile())
-
                 .saldaturaReale(dto.getSaldaturaReale())
                 .saldaturaFatturabile(dto.getSaldaturaFatturabile())
-
                 .foraturaReale(dto.getForaturaReale())
                 .foraturaFatturabile(dto.getForaturaFatturabile())
-
                 .filettaturaReale(dto.getFilettaturaReale())
                 .filettaturaFatturabile(dto.getFilettaturaFatturabile())
-
                 .montaggioReale(dto.getMontaggioReale())
                 .montaggioFatturabile(dto.getMontaggioFatturabile())
-
                 .scatolaturaReale(dto.getScatolaturaReale())
                 .scatolaturaFatturabile(dto.getScatolaturaFatturabile())
-
-                .dataRisultato(dto.getDataRisultato() != null ? dto.getDataRisultato() : LocalDateTime.now())
+                .dataRisultato(dataRisultato)
                 .prezzo(dto.getPrezzo())
                 .quantita(dto.getQuantita() != null ? dto.getQuantita() : BigDecimal.ZERO)
                 .build();

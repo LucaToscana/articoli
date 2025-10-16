@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -152,7 +154,7 @@ public class WorkServiceImpl implements WorkService {
 			operatorWork.setEndTime(dto.getEndTime());
 
 		} else {
-			LocalDateTime originalStartTime = LocalDateTime.now();
+			LocalDateTime originalStartTime = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
 			operatorWork.setOriginalStartTime(originalStartTime);
 			operatorWork.setStartTime(originalStartTime);
 		}
@@ -170,10 +172,12 @@ public class WorkServiceImpl implements WorkService {
 	@Transactional
 	@Override
 	public WorkDto closeWork(Long workId, WorkStatus newStatus) {
+		LocalDateTime endTime = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+		
 		Work work = workRepository.findById(workId)
 				.orElseThrow(() -> new RuntimeException("Lavoro non trovato con ID: " + workId));
 		work.setStatus(newStatus);
-		work.setEndTime(LocalDateTime.now());
+		work.setEndTime(endTime);
 		return WorkMapper.toDto(workRepository.save(work));
 	}
 
@@ -472,8 +476,8 @@ public class WorkServiceImpl implements WorkService {
 	public WorkDto transitionWork(Long workId, WorkStatus newStatus) {
 		Work current = workRepository.findById(workId)
 				.orElseThrow(() -> new RuntimeException("Work non trovato: " + workId));
-
-		current.setEndTime(LocalDateTime.now());
+		LocalDateTime end = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+		current.setEndTime(end);
 		workRepository.save(current);
 
 		Work cloned = new Work();
@@ -494,7 +498,9 @@ public class WorkServiceImpl implements WorkService {
 		cloned.setQuantita(current.getQuantita());
 		cloned.setStatus(newStatus);
 		cloned.setOriginalStartTime(current.getOriginalStartTime());
-		cloned.setStartTime(LocalDateTime.now());
+		LocalDateTime start = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+
+		cloned.setStartTime(start);
 
 		return WorkMapper.toDto(workRepository.save(cloned));
 	}
@@ -536,8 +542,10 @@ public class WorkServiceImpl implements WorkService {
 	 * @param oa OrdineArticolo
 	 */
 	public void closeLastWork(OrdineArticolo oa) {
+		LocalDateTime end = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+
 		oa.getWorks().stream().max(Comparator.comparing(Work::getStartTime)).ifPresent(work -> {
-			work.setEndTime(LocalDateTime.now());
+			work.setEndTime(end);
 			workRepository.save(work);
 		});
 	}

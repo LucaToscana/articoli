@@ -35,7 +35,7 @@ public class SecurityConfig {
 			 * "http://localhost:5173", "http://localhost:5174"
 			 */
 			/*
-			 * "https://ilpicchio.cloud", "https://www.ilpicchio.cloud"
+			 * "http://localhost:5173", "http://localhost:5174"
 			 */
 			corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:5173", "http://localhost:5174"));
 			corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
