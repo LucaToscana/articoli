@@ -1,5 +1,7 @@
 package com.gestione.articoli.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,4 +17,5 @@ public class MachineDto {
     private String username;        // nome della postazione
     private Boolean activeInCompany;
     private Boolean machineUser;    // sempre true
+    private List<LavorazioneDto> lavorazioni; // nuove lavorazioni associate
 }

@@ -281,4 +281,13 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 	@Modifying
 	@Transactional
 	void deleteByOrderArticle_Ordine_Id(Long ordineId);
+	List<Work> findByArticoloIdAndActivityNotIn(
+		    Long articoloId,
+		    List<WorkActivityType> excludedActivities
+		);
+	void deleteByArticoloId(Long articoloId);
+	List<Work> findByManagerAndStatusAndEndTimeIsNull(User existing, WorkStatus inProgress);
+	List<Work> findByOrderArticleAndOriginalStartTime(OrdineArticolo ordineArticolo, LocalDateTime originalStartTime);
+	List<Work> findByOrderArticleAndOriginalStartTimeAndActivity(OrdineArticolo ordineArticolo,
+			LocalDateTime originalStartTime, WorkActivityType activityType);
 }

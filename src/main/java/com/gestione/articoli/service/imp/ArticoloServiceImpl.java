@@ -10,7 +10,10 @@ import com.gestione.articoli.mapper.AziendaMapper;
 import com.gestione.articoli.model.Articolo;
 import com.gestione.articoli.model.Ordine;
 import com.gestione.articoli.model.OrdineArticolo;
+import com.gestione.articoli.model.Work;
+import com.gestione.articoli.model.WorkActivityType;
 import com.gestione.articoli.repository.ArticoloRepository;
+import com.gestione.articoli.repository.WorkRepository;
 import com.gestione.articoli.service.ArticoloService;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 public class ArticoloServiceImpl implements ArticoloService {
 
 	private final ArticoloRepository articoloRepository;
+	private final WorkRepository workRepository;
 
 	@Override
 	@Transactional
@@ -153,9 +157,44 @@ public class ArticoloServiceImpl implements ArticoloService {
 	}
 
 	@Override
-	public void deleteById(Long id) {
-		articoloRepository.deleteById(id);
+	@Transactional
+	public void deleteById(Long articoloId) {
+	    if (articoloId == null) {
+	        throw new IllegalArgumentException("ID articolo non può essere null");
+	    }
+
+	    // 1️⃣ Recupera gli ordini collegati all'articolo
+	    ArticoloOrdersDto ordiniCollegati = getOrdiniPerArticolo(articoloId);
+
+	    boolean haOrdini = (ordiniCollegati.getOrdiniComePadre() != null && !ordiniCollegati.getOrdiniComePadre().isEmpty())
+	            || (ordiniCollegati.getOrdiniComeFiglio() != null && !ordiniCollegati.getOrdiniComeFiglio().isEmpty());
+
+	    if (haOrdini) {
+	        throw new IllegalStateException("Impossibile eliminare l'articolo: esistono ordini collegati.");
+	    }
+
+	    // 2️⃣ Verifica se ci sono lavorazioni collegate non disponibili
+	    List<Work> vincoli = workRepository.findByArticoloIdAndActivityNotIn(
+	            articoloId,
+	            List.of(
+	                WorkActivityType.DISPONIBILITA_LOTTO,
+	                WorkActivityType.DISPONIBILITA_LAVORAZIONE
+	            )
+	    );
+
+	    if (vincoli != null && !vincoli.isEmpty()) {
+	        throw new IllegalStateException(
+	            "Impossibile eliminare l'articolo: ci sono lavorazioni collegate non disponibili."
+	        );
+	    }
+
+	    // 3️⃣ Elimina tutte le lavorazioni collegate (solo DISPONIBILITA)
+	    workRepository.deleteByArticoloId(articoloId);
+
+	    // 4️⃣ Elimina l'articolo
+	    articoloRepository.deleteById(articoloId);
 	}
+
 
 	@Override
 	public Optional<Articolo> findEntityById(Long id) {
@@ -205,7 +244,7 @@ public class ArticoloServiceImpl implements ArticoloService {
             ordiniPadreMap.putIfAbsent(ordine.getId(), mapOrdineToDto(ordine, articoloId, false));
         }
 
-        for (Articolo figlio : articolo.getArticoliFigli()) {
+        for (Articolo figlio : articolo.getArticoliPadri()) {
             for (OrdineArticolo articoloOrdine : figlio.getOrdini()) {
                 Ordine ordine = articoloOrdine.getOrdine();
                 ordiniFiglioMap.putIfAbsent(ordine.getId(), mapOrdineToDto(ordine, articoloId, true));

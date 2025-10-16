@@ -99,7 +99,7 @@ public class WorkServiceImpl implements WorkService {
 		operatorWork.setArticolo(articolo);
 
 		if (dto.getLavorazione() != null && !dto.getLavorazione().trim().isEmpty())
-			operatorWork.setActivity(WorkActivityType.valueOf(dto.getLavorazione()));
+			operatorWork.setActivity(WorkActivityType.valueOf(dto.getLavorazione().toUpperCase()));
 
 		if (dto.getSpecifiche() != null && !dto.getSpecifiche().trim().isEmpty())
 			operatorWork.setSpecifiche(WorkSpecificType.valueOf(dto.getSpecifiche()));
@@ -220,11 +220,37 @@ public class WorkServiceImpl implements WorkService {
 	 * @param id ID del Work
 	 */
 	@Override
+	@Transactional
 	public void deleteWork(Long id) {
-		if (!workRepository.existsById(id))
-			throw new RuntimeException("Work non trovato con id " + id);
-		workRepository.deleteById(id);
+	    // Recupera la work principale
+	    Work work = workRepository.findById(id)
+	            .orElseThrow(() -> new RuntimeException("Work non trovata con id " + id));
+
+	    OrdineArticolo ordineArticolo = work.getOrderArticle();
+	    LocalDateTime originalStartTime = work.getOriginalStartTime();
+	    WorkActivityType activityType = work.getActivity();
+
+	    if (ordineArticolo == null || originalStartTime == null || activityType == null) {
+	        throw new RuntimeException("Work senza ordine, originalStartTime o activityType non impostato");
+	    }
+
+	    // Recupera tutte le lavorazioni con stesso ordine, stesso originalStartTime e stessa activity
+	    List<Work> lavoriDaEliminare = workRepository
+	            .findByOrderArticleAndOriginalStartTimeAndActivity(ordineArticolo, originalStartTime, activityType);
+
+	    if (lavoriDaEliminare.isEmpty()) {
+	        throw new RuntimeException("Nessuna lavorazione trovata con ordine, originalStartTime e activity corrispondenti");
+	    }
+
+	    // Elimina tutte
+	    workRepository.deleteAll(lavoriDaEliminare);
+
+	    System.out.println("✅ Eliminati " + lavoriDaEliminare.size() +
+	            " lavori per ordineArticolo ID: " + ordineArticolo.getId() +
+	            ", originalStartTime: " + originalStartTime +
+	            " e activity: " + activityType);
 	}
+
 
 	@Transactional
 	public void cleanCompletedOrderWorks(Long orderId) {

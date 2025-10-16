@@ -64,6 +64,7 @@ public class SecurityConfig {
 				.requestMatchers("/api/works/**").hasAnyRole("USER", "ADMIN")
 
 				.requestMatchers("/api/statistics/**").hasRole("ADMIN") // solo admin può leggere le statistiche
+	            .requestMatchers("/api/users/my-activity").hasAnyRole("USER", "ADMIN")
 				.requestMatchers("/api/users/**").hasRole("ADMIN") // solo admin può leggere le statistiche
 				.requestMatchers("/api/users").hasRole("ADMIN") // solo admin può leggere le statistiche
 

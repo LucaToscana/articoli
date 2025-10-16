@@ -9,4 +9,5 @@ public interface AdminService {
 	List<AdminDto> getAdmins();
     void deleteAdmin(Long id);
 	AdminDto getAdminById(Long id);
+	
 }

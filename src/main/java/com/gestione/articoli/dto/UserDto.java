@@ -2,6 +2,8 @@ package com.gestione.articoli.dto;
 
 import lombok.*;
 import java.util.Set;
+
+import com.gestione.articoli.model.Lavorazione;
 import com.gestione.articoli.model.Role;
 
 @Data
@@ -15,5 +17,6 @@ public class UserDto {
     private String username;
     private String password;
     private Set<Role> roles;
+    private Set<Lavorazione> lavorazioni;
 
 }

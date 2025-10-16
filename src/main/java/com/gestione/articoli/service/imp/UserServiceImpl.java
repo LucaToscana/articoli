@@ -3,12 +3,16 @@ package com.gestione.articoli.service.imp;
 import com.gestione.articoli.config.PasswordProperties;
 import com.gestione.articoli.dto.AdminDto;
 import com.gestione.articoli.dto.InactiveUsersDto;
+import com.gestione.articoli.dto.LavorazioneDto;
 import com.gestione.articoli.dto.MachineDto;
 import com.gestione.articoli.dto.OperatorDto;
 import com.gestione.articoli.dto.UserDto;
+import com.gestione.articoli.mapper.LavorazioneMapper;
 import com.gestione.articoli.mapper.UserMapper;
+import com.gestione.articoli.model.Lavorazione;
 import com.gestione.articoli.model.Role;
 import com.gestione.articoli.model.User;
+import com.gestione.articoli.repository.LavorazioneRepository;
 import com.gestione.articoli.repository.UserRepository;
 import com.gestione.articoli.repository.WorkRepository;
 import com.gestione.articoli.service.UserService;
@@ -33,7 +37,8 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 	private final UserRepository userRepository;
 	private final WorkRepository workRepository;
-
+    private final LavorazioneRepository lavorazioneRepository;
+    private final LavorazioneMapper lavorazioneMapper; 
 	private final PasswordEncoder passwordEncoder;
 	private final PasswordProperties passwordProperties;
 	private static final int MAX_ADMINS = 16;
@@ -251,5 +256,43 @@ public class UserServiceImpl implements UserService {
 		return lower.equals("admin") || lower.equals("user") || lower.equals("manager") || lower.equals("admin_lt")
 				|| lower.equals("i");
 	}
+    @Override
+    public Set<LavorazioneDto> getLavorazioniByUserId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User non trovato con id: " + userId));
 
+        return user.getLavorazioni().stream()
+                .map(lavorazioneMapper::toDto) // 🔹 usa il mapper iniettato
+                .collect(Collectors.toSet());
+    }
+    @Override
+    public void addLavorazioneToUser(Long userId, Long lavorazioneId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User non trovato con id: " + userId));
+        
+        if (!user.isMachineUser()) {
+            throw new IllegalArgumentException("Solo macchine possono avere lavorazioni assegnate.");
+        }
+
+        Lavorazione lavorazione = lavorazioneRepository.findById(lavorazioneId)
+                .orElseThrow(() -> new IllegalArgumentException("Lavorazione non trovata con id: " + lavorazioneId));
+
+        user.getLavorazioni().add(lavorazione);
+        userRepository.save(user);
+    }
+    @Override
+    public void removeLavorazioneFromUser(Long userId, Long lavorazioneId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User non trovato con id: " + userId));
+
+        if (!user.isMachineUser()) {
+            throw new IllegalArgumentException("Solo macchine possono rimuovere lavorazioni.");
+        }
+
+        Lavorazione lavorazione = lavorazioneRepository.findById(lavorazioneId)
+                .orElseThrow(() -> new IllegalArgumentException("Lavorazione non trovata con id: " + lavorazioneId));
+
+        user.getLavorazioni().remove(lavorazione);
+        userRepository.save(user);
+    }
 }

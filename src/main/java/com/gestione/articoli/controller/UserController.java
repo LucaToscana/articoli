@@ -1,6 +1,7 @@
 package com.gestione.articoli.controller;
 
 import com.gestione.articoli.dto.AdminDto;
+import com.gestione.articoli.dto.CreateMachineRequest;
 import com.gestione.articoli.dto.InactiveUsersDto;
 import com.gestione.articoli.dto.MachineDto;
 import com.gestione.articoli.dto.OperatorDto;
@@ -110,13 +111,24 @@ public class UserController {
 	}
 
 	@PostMapping("/machine")
-	public ResponseEntity<String> createMachine(@RequestParam String name, @RequestParam String password) {
-		String result = machineService.createMachine(name, password);
-		if (result.endsWith("successo")) {
-			return ResponseEntity.ok(result);
-		}
-		return ResponseEntity.badRequest().body(result);
+	public ResponseEntity<String> createMachine(@RequestBody CreateMachineRequest request) {
+
+	    if (request.getLavorazioniIds() == null || request.getLavorazioniIds().isEmpty()) {
+	        return ResponseEntity.badRequest().body("Seleziona almeno una lavorazione");
+	    }
+
+	    String result = machineService.createMachine(
+	        request.getName(),
+	        request.getPassword(),
+	        request.getLavorazioniIds()
+	    );
+
+	    if (result.endsWith("successo")) {
+	        return ResponseEntity.ok(result);
+	    }
+	    return ResponseEntity.badRequest().body(result);
 	}
+
 
 	@GetMapping("/admins")
 	public ResponseEntity<List<AdminDto>> getAdmins() {
@@ -128,6 +140,14 @@ public class UserController {
 		return ResponseEntity.ok(machineService.getMachines());
 	}
 
+    // Aggiorna una macchina
+	@PutMapping("/machines/{id}")
+	public ResponseEntity<MachineDto> updateMachine(
+	        @PathVariable Long id,
+	        @RequestBody MachineDto machineDto) {
+	    MachineDto updated = machineService.updateMachine(id, machineDto);
+	    return ResponseEntity.ok(updated);
+	}
 	@GetMapping("/operators/{id}")
 	public ResponseEntity<OperatorDto> getOperatorById(@PathVariable Long id) {
 		var operator = operatorService.getOperatorById(id);
@@ -168,6 +188,15 @@ public class UserController {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
 		}
 	}
+    @GetMapping("/my-activity")
+    public ResponseEntity<MachineDto> getMyActivity() {
+        try {
+            MachineDto activity = machineService.getMyActivity();
+            return ResponseEntity.ok(activity);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
 
 	@GetMapping("/inactive")
 	public ResponseEntity<InactiveUsersDto> getAllInactiveUsersGrouped() {
@@ -187,6 +216,27 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+    /**
+     * Aggiorna la password di una macchina/postazione
+     */
+    @PutMapping("/machines/{id}/password")
+    public ResponseEntity<?> updateMachinePassword(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        try {
+            String newPassword = body.get("password");
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "La password non può essere vuota"));
+            }
+
+            machineService.updateMachinePassword(id, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password aggiornata con successo"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

@@ -45,5 +45,13 @@ public class User {
 
 
     private String machineName;
-    
+
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_lavorazioni",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "lavorazione_id")
+    )
+    private Set<Lavorazione> lavorazioni = new HashSet<>();
 }

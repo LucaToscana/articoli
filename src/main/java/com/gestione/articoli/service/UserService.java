@@ -1,11 +1,13 @@
 package com.gestione.articoli.service;
 
 import com.gestione.articoli.dto.InactiveUsersDto;
+import com.gestione.articoli.dto.LavorazioneDto;
 import com.gestione.articoli.dto.UserDto;
 import com.gestione.articoli.model.User;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 public interface UserService {
 
@@ -41,5 +43,11 @@ public interface UserService {
 
 
 	void reactivateUser(Long userId) throws Exception;
+	
+    // 🔹 Gestione lavorazioni
+    Set<LavorazioneDto> getLavorazioniByUserId(Long id);
+    void removeLavorazioneFromUser(Long id, Long lavorazioneId);
+
+	void addLavorazioneToUser(Long id, Long lavorazioneId);
 
 }
