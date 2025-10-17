@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -141,8 +142,14 @@ public class WorkServiceImpl implements WorkService {
 			LocalDateTime end = dto.getEndTime();
 
 // Ottieni millisecondi correnti
-			int currentMillis = (int) (System.currentTimeMillis() % 1000);
-			int currentNano = currentMillis * 1_000_000; // converti millisecondi in nanosecondi
+			 // Ottieni il tempo corrente in Italia
+	        ZonedDateTime nowItaly = ZonedDateTime.now(ZoneId.of("Europe/Rome"));
+
+	        // Ottieni i millisecondi dall'inizio del secondo
+	        int currentMillis = nowItaly.getNano() / 1_000_000;
+
+	        // Converti millisecondi in nanosecondi
+	        int currentNano = currentMillis * 1_000_000;
 
 // Aggiorna startTime e endTime con i millisecondi correnti
 			dto.setStartTime(start.withNano(currentNano));
@@ -389,11 +396,46 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public List<WorkDto> getInProgressManualWorks() {
-		return workRepository
-				.findInProgressManualWorksExcludedActivities(List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
-						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()))
-				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
+	    // Recupera username dell'utente/macchina dal contesto di sicurezza
+	    String username = SecurityContextHolder.getContext().getAuthentication().getName();
+	    if (username == null || username.isBlank()) {
+	        throw new RuntimeException("Utente non autenticato");
+	    }
+
+	    // Controlla se l'utente ha il ruolo USER (macchina)
+	    boolean isUser = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+	            .stream()
+	            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
+
+	    // Recupera tutti i lavori manuali in corso, escludendo certe attività
+	    List<WorkDto> allManualWorks = workRepository
+	            .findInProgressManualWorksExcludedActivities(
+	                    List.of(
+	                        WorkActivityType.DISPONIBILITA_LOTTO.name(),
+	                        WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
+	                    ))
+	            .stream()
+	            .map(WorkMapper::toDto)
+	            .collect(Collectors.toList());
+
+	    // Se è un utente macchina, filtriamo i lavori in base alle attività della macchina
+	    if (isUser) {
+	        User machineUser = userRepository.findByUsernameAndMachineUserTrue(username)
+	                .orElseThrow(() -> new RuntimeException("Macchina non trovata"));
+
+	        Set<String> machineActivities = machineUser.getLavorazioni()
+	                .stream()
+	                .map(lav -> lav.getNome().toUpperCase())
+	                .collect(Collectors.toSet());
+
+	        allManualWorks = allManualWorks.stream()
+	                .filter(work -> machineActivities.contains(work.getActivity()))
+	                .collect(Collectors.toList());
+	    }
+
+	    return allManualWorks;
 	}
+
 
 	@Override
 	public List<WorkDto> getManualWorksWithTotalMinutesByOrderInProgress(Long orderId) {
@@ -499,7 +541,6 @@ public class WorkServiceImpl implements WorkService {
 		cloned.setStatus(newStatus);
 		cloned.setOriginalStartTime(current.getOriginalStartTime());
 		LocalDateTime start = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
-
 		cloned.setStartTime(start);
 
 		return WorkMapper.toDto(workRepository.save(cloned));
