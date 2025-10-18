@@ -295,4 +295,22 @@ public class UserServiceImpl implements UserService {
         user.getLavorazioni().remove(lavorazione);
         userRepository.save(user);
     }
+    @Override
+    public BigDecimal getCostoPersonaleMedio() {
+        List<User> activeOperators = userRepository.findByRolesIsEmptyAndActiveInCompanyTrueOrderByUsernameAsc();
+
+        if (activeOperators.isEmpty()) {
+            return BigDecimal.ZERO; // default se nessun utente valido
+        }
+
+        BigDecimal sum = activeOperators.stream()
+                .map(User::getRetribuzioneOraria)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal media = sum.divide(
+                BigDecimal.valueOf(activeOperators.size()), 
+                4, 
+                java.math.RoundingMode.CEILING );
+        return media ;
+    }
+
 }

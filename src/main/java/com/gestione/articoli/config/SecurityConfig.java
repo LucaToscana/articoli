@@ -37,7 +37,7 @@ public class SecurityConfig {
 			/*
 			 * "https://ilpicchio.cloud", "https://www.ilpicchio.cloud"
 			 */
-			corsConfig.setAllowedOrigins(java.util.List.of("https://ilpicchio.cloud", "https://www.ilpicchio.cloud"));
+			corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:5173", "http://localhost:5174"));
 			corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 			corsConfig.setAllowedHeaders(java.util.List.of("*"));
 			corsConfig.setAllowCredentials(true);
@@ -45,6 +45,9 @@ public class SecurityConfig {
 		})).csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth
 				// Login e registrazione liberi
 				.requestMatchers("/api/auth/**").permitAll()
+				// Settings
+				.requestMatchers("/api/parametraggi").hasAnyRole( "ADMIN")
+				.requestMatchers("/api/parametraggi/**").hasAnyRole( "ADMIN")
 				// Articoli
 				.requestMatchers(HttpMethod.POST, "/api/articoli").hasRole("ADMIN")
 				.requestMatchers("/api/articoli").hasRole("ADMIN")
@@ -63,6 +66,7 @@ public class SecurityConfig {
 				.requestMatchers("/api/works").hasAnyRole("USER", "ADMIN")
 				.requestMatchers("/api/works/**").hasAnyRole("USER", "ADMIN")
 
+				
 				.requestMatchers("/api/statistics/**").hasRole("ADMIN") // solo admin può leggere le statistiche
 	            .requestMatchers("/api/users/my-activity").hasAnyRole("USER", "ADMIN")
 				.requestMatchers("/api/users/**").hasRole("ADMIN") // solo admin può leggere le statistiche

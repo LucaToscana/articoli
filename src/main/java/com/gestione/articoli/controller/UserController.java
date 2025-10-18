@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -64,14 +65,13 @@ public class UserController {
 	// Elimina un utente
 	@DeleteMapping("/{id}")
 	public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-	    try {
-	        userService.deleteUser(id);
-	        return ResponseEntity.ok(Map.of("success", true, "message", "Utente eliminato con successo"));
-	    } catch (RuntimeException e) {
-	        return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
-	    }
+		try {
+			userService.deleteUser(id);
+			return ResponseEntity.ok(Map.of("success", true, "message", "Utente eliminato con successo"));
+		} catch (RuntimeException e) {
+			return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+		}
 	}
-
 
 	/**
 	 * Crea un operatore/postazione. Controlla se esiste già (case-insensitive).
@@ -92,8 +92,7 @@ public class UserController {
 
 		// Controllo se l’utente esiste già (case-insensitive)
 		if (userService.existsByUsernameIgnoreCase(normalizedUsername)) {
-			return ResponseEntity.badRequest()
-					.body("Nome '" + operator.getUsername() + "' già presente");
+			return ResponseEntity.badRequest().body("Nome '" + operator.getUsername() + "' già presente");
 		}
 
 		// Creazione operatore
@@ -113,22 +112,18 @@ public class UserController {
 	@PostMapping("/machine")
 	public ResponseEntity<String> createMachine(@RequestBody CreateMachineRequest request) {
 
-	    if (request.getLavorazioniIds() == null || request.getLavorazioniIds().isEmpty()) {
-	        return ResponseEntity.badRequest().body("Seleziona almeno una lavorazione");
-	    }
+		if (request.getLavorazioniIds() == null || request.getLavorazioniIds().isEmpty()) {
+			return ResponseEntity.badRequest().body("Seleziona almeno una lavorazione");
+		}
 
-	    String result = machineService.createMachine(
-	        request.getName(),
-	        request.getPassword(),
-	        request.getLavorazioniIds()
-	    );
+		String result = machineService.createMachine(request.getName(), request.getPassword(),
+				request.getLavorazioniIds());
 
-	    if (result.endsWith("successo")) {
-	        return ResponseEntity.ok(result);
-	    }
-	    return ResponseEntity.badRequest().body(result);
+		if (result.endsWith("successo")) {
+			return ResponseEntity.ok(result);
+		}
+		return ResponseEntity.badRequest().body(result);
 	}
-
 
 	@GetMapping("/admins")
 	public ResponseEntity<List<AdminDto>> getAdmins() {
@@ -140,14 +135,13 @@ public class UserController {
 		return ResponseEntity.ok(machineService.getMachines());
 	}
 
-    // Aggiorna una macchina
+	// Aggiorna una macchina
 	@PutMapping("/machines/{id}")
-	public ResponseEntity<MachineDto> updateMachine(
-	        @PathVariable Long id,
-	        @RequestBody MachineDto machineDto) {
-	    MachineDto updated = machineService.updateMachine(id, machineDto);
-	    return ResponseEntity.ok(updated);
+	public ResponseEntity<MachineDto> updateMachine(@PathVariable Long id, @RequestBody MachineDto machineDto) {
+		MachineDto updated = machineService.updateMachine(id, machineDto);
+		return ResponseEntity.ok(updated);
 	}
+
 	@GetMapping("/operators/{id}")
 	public ResponseEntity<OperatorDto> getOperatorById(@PathVariable Long id) {
 		var operator = operatorService.getOperatorById(id);
@@ -188,15 +182,16 @@ public class UserController {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
 		}
 	}
-    @GetMapping("/my-activity")
-    public ResponseEntity<MachineDto> getMyActivity() {
-        try {
-            MachineDto activity = machineService.getMyActivity();
-            return ResponseEntity.ok(activity);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
-    }
+
+	@GetMapping("/my-activity")
+	public ResponseEntity<MachineDto> getMyActivity() {
+		try {
+			MachineDto activity = machineService.getMyActivity();
+			return ResponseEntity.ok(activity);
+		} catch (RuntimeException e) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+		}
+	}
 
 	@GetMapping("/inactive")
 	public ResponseEntity<InactiveUsersDto> getAllInactiveUsersGrouped() {
@@ -208,35 +203,45 @@ public class UserController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
 		}
 	}
-    @PutMapping("/reactivate/{userId}")
-    public ResponseEntity<?> reactivateUser(@PathVariable Long userId) {
-        try {
-            userService.reactivateUser(userId);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Utente riattivato con successo"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("error", e.getMessage()));
-        }
-    }
-    /**
-     * Aggiorna la password di una macchina/postazione
-     */
-    @PutMapping("/machines/{id}/password")
-    public ResponseEntity<?> updateMachinePassword(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body) {
-        try {
-            String newPassword = body.get("password");
-            if (newPassword == null || newPassword.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "La password non può essere vuota"));
-            }
 
-            machineService.updateMachinePassword(id, newPassword);
-            return ResponseEntity.ok(Map.of("message", "Password aggiornata con successo"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
+	@PutMapping("/reactivate/{userId}")
+	public ResponseEntity<?> reactivateUser(@PathVariable Long userId) {
+		try {
+			userService.reactivateUser(userId);
+			return ResponseEntity.ok(Collections.singletonMap("message", "Utente riattivato con successo"));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Collections.singletonMap("error", e.getMessage()));
+		}
+	}
+
+	/**
+	 * Aggiorna la password di una macchina/postazione
+	 */
+	@PutMapping("/machines/{id}/password")
+	public ResponseEntity<?> updateMachinePassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
+		try {
+			String newPassword = body.get("password");
+			if (newPassword == null || newPassword.trim().isEmpty()) {
+				return ResponseEntity.badRequest().body(Map.of("error", "La password non può essere vuota"));
+			}
+
+			machineService.updateMachinePassword(id, newPassword);
+			return ResponseEntity.ok(Map.of("message", "Password aggiornata con successo"));
+		} catch (RuntimeException e) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+		}
+	}
+
+	// 🔹 Nuovo endpoint per il costo orario medio personale
+	@GetMapping("/costo-personale-medio")
+	public ResponseEntity<Map<String, BigDecimal>> getCostoPersonaleMedio() {
+		try {
+			BigDecimal costoMedio = userService.getCostoPersonaleMedio();
+			return ResponseEntity.ok(Map.of("costoOrarioMedio", costoMedio));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("costoOrarioMedio", BigDecimal.ZERO));
+		}
+	}
 }

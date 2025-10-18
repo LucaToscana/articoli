@@ -4,30 +4,29 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 
-import com.gestione.articoli.model.User;
-import com.gestione.articoli.model.Role;
-import com.gestione.articoli.model.Lavorazione;
-import com.gestione.articoli.repository.UserRepository;
-import com.gestione.articoli.repository.LavorazioneRepository;
+import com.gestione.articoli.model.*;
+import com.gestione.articoli.repository.*;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    private final UserRepository userRepository;
-    private final LavorazioneRepository lavorazioneRepository;
-    private final PasswordEncoder passwordEncoder;
+	private final UserRepository userRepository;
+	private final LavorazioneRepository lavorazioneRepository;
+	private final ParametraggioRepository parametraggioRepository;
+	private final PasswordEncoder passwordEncoder;
 
-    @Override
+	@Override
     public void run(String... args) throws Exception {
 
         // ----------------------------
-        // 1️⃣ Creazione lavorazioni base se non esistono
+        // 1️ Creazione lavorazioni base se non esistono
         // ----------------------------
         String[] lavorazioniBase = {
             "Molatura", "Lucidatura", "Saldatura", "Foratura", "Filettatura", "Montaggio", "Scatolatura"
@@ -39,12 +38,12 @@ public class DataInitializer implements CommandLineRunner {
                 lav.setNome(nome);
                 lav.setDescrizione(nome + " di default");
                 lavorazioneRepository.save(lav);
-                System.out.println("Lavorazione creata: " + nome);
+                System.out.println("✅ Lavorazione creata: " + nome);
             }
         }
 
         // ----------------------------
-        // 2️⃣ Creazione utente admin
+        // 2️ Creazione utente admin
         // ----------------------------
         String defaultAdmin = "admin";
         if (userRepository.findByUsername(defaultAdmin).isEmpty()) {
@@ -56,13 +55,13 @@ public class DataInitializer implements CommandLineRunner {
             admin.setActiveInCompany(true);
             admin.setRetribuzioneOraria(BigDecimal.ZERO);
             userRepository.save(admin);
-            System.out.println("Utente admin creato all'avvio");
+            System.out.println("✅ Utente admin creato all'avvio");
         } else {
-            System.out.println("Utente admin già presente");
+            System.out.println("ℹ️ Utente admin già presente");
         }
 
         // ----------------------------
-        // 3️⃣ Creazione macchina di default
+        // 3️ Creazione macchina di default
         // ----------------------------
         String defaultMachine = "machine1";
         if (userRepository.findByUsername(defaultMachine).isEmpty()) {
@@ -79,9 +78,70 @@ public class DataInitializer implements CommandLineRunner {
             machine.setLavorazioni(tutteLavorazioni);
 
             userRepository.save(machine);
-            System.out.println("Macchina creata all'avvio con tutte le lavorazioni");
+            System.out.println("✅ Macchina creata all'avvio con tutte le lavorazioni");
         } else {
-            System.out.println("Macchina già presente");
+            System.out.println("ℹ️ Macchina già presente");
         }
+
+     // ----------------------------
+     // 4️ Creazione parametraggi di base
+     // ----------------------------
+     if (parametraggioRepository.count() == 0) {
+         List<Parametraggio> parametriIniziali = List.of(
+             // 🔹 ECONOMICI
+             Parametraggio.builder()
+                     .nome("RICARICO_BASE")
+                     .categoria(CategoriaParametraggio.ECONOMICI)
+                     .tipoValore(TipoValoreParametraggio.PERCENTUALE)
+                     .valoreNumerico(BigDecimal.valueOf(200))
+                     .descrizione("Percentuale di ricarico base")
+                     .attivo(true)
+                     .build(),
+
+             Parametraggio.builder()
+                     .nome("IVA_STANDARD")
+                     .categoria(CategoriaParametraggio.ECONOMICI)
+                     .tipoValore(TipoValoreParametraggio.PERCENTUALE)
+                     .valoreNumerico(BigDecimal.valueOf(22))
+                     .descrizione("Aliquota IVA standard")
+                     .attivo(true)
+                     .build(),
+
+             // 🔹 LAVORAZIONI
+             Parametraggio.builder()
+                     .nome("COSTO_PERSONALE_ORARIO_MEDIO")
+                     .categoria(CategoriaParametraggio.ECONOMICI)
+                     .tipoValore(TipoValoreParametraggio.ORARIO) // o AL_MINUTO se definito
+                     .valoreNumerico(BigDecimal.valueOf(16))
+                     .descrizione("Costo medio del personale per ora. Sono considerati solo gli OPERATORI ATTIVI.")
+                     .attivo(true)
+                     .build(),
+
+             Parametraggio.builder()
+                     .nome("PREZZO_ORARIO_FISSO")
+                     .categoria(CategoriaParametraggio.ECONOMICI)
+                     .tipoValore(TipoValoreParametraggio.ORARIO) // o AL_MINUTO se definito
+                     .valoreNumerico(BigDecimal.valueOf(35))
+                     .descrizione("Prezzo calcolato all' ora per le lavorazioni. NON TASSATO.")
+                     .attivo(true)
+                     .build() ,
+                     
+             Parametraggio.builder()
+                     .nome("COSTO_ORARIO_FISSO")
+                     .categoria(CategoriaParametraggio.ECONOMICI)
+                     .tipoValore(TipoValoreParametraggio.ORARIO) // o AL_MINUTO se definito
+                     .valoreNumerico(BigDecimal.valueOf(2))
+                     .descrizione(" Spese generali e strutturali aziendali. Costo all' ora per le lavorazioni, non é incluso COSTO_PERSONALE_ORARIO_MEDIO")
+                     .attivo(true)
+                     .build()        
+                     
+                     
+         );
+
+         parametraggioRepository.saveAll(parametriIniziali);
+         System.out.println("✅ Parametraggi di base creati all’avvio (" + parametriIniziali.size() + " record).");
+     } else {
+         System.out.println("ℹ️ Parametraggi già presenti (" + parametraggioRepository.count() + " record).");
+     }
     }
 }

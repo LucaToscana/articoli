@@ -50,4 +50,6 @@ public interface UserService {
 
 	void addLavorazioneToUser(Long id, Long lavorazioneId);
 
+	BigDecimal getCostoPersonaleMedio();
+
 }

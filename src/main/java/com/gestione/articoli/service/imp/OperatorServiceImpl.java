@@ -78,26 +78,27 @@ public class OperatorServiceImpl implements OperatorService {
 
 		if (operatorDto.getActiveInCompany() != null) {
 			existing.setActiveInCompany(operatorDto.getActiveInCompany());
+
 			if (existing.getRoles().isEmpty()) {
 				List<Work> activeWorks = workRepository.findByOperatorAndStatusAndEndTimeIsNull(existing,
 						WorkStatus.IN_PROGRESS);
+				if (existing.isActiveInCompany()==true && operatorDto.getActiveInCompany()==false) {
+					boolean hasRelevantWork = activeWorks.stream()
+							.anyMatch(work -> work.getActivity() != WorkActivityType.DISPONIBILITA_LOTTO
+									&& work.getActivity() != WorkActivityType.DISPONIBILITA_LAVORAZIONE);
 
-				boolean hasRelevantWork = activeWorks.stream()
-						.anyMatch(work -> work.getActivity() != WorkActivityType.DISPONIBILITA_LOTTO
-								&& work.getActivity() != WorkActivityType.DISPONIBILITA_LAVORAZIONE);
-
-				if (hasRelevantWork) {
-					throw new RuntimeException(
-							"Errore durante aggiornamento operatore. Potrebbe essere presente in lavorazioni in corso. In caso prova a chiuderle e riprova.");
+					if (hasRelevantWork) {
+						throw new RuntimeException(
+								"Errore durante aggiornamento operatore. Potrebbe essere presente in lavorazioni in corso. In caso prova a chiuderle e riprova.");
+					}
 				}
 			}
 			if (existing.getRoles().contains(Role.ADMIN)) {
-			    long adminCount = userRepository.countActiveByRole(Role.ADMIN);
-			    if (adminCount < 5) {
-			        throw new RuntimeException(
-			            "Impossibile disattivare questo admin: nel database devono essere presenti un minimo numero di admin attivi. Creane altri e ritenta."
-			        );
-			    }		
+				long adminCount = userRepository.countActiveByRole(Role.ADMIN);
+				if (adminCount < 5) {
+					throw new RuntimeException(
+							"Impossibile disattivare questo admin: nel database devono essere presenti un minimo numero di admin attivi. Creane altri e ritenta.");
+				}
 			}
 		}
 
