@@ -7,8 +7,7 @@ import java.time.LocalDateTime;
 import com.gestione.articoli.model.WorkStatus;
 import com.gestione.articoli.model.OrdineRisultato;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -54,6 +53,14 @@ public class OrdineRisultatoDto {
     private BigDecimal prezzo;
     private BigDecimal quantita;
 
+    // 🔹 Parametri di calcolo (camelCase)
+    private BigDecimal prezzoOrarioFisso;
+    private BigDecimal prezzoEffettivo;
+    private BigDecimal costoOrarioFisso;
+    private BigDecimal costoPersonaleOrarioMedio;
+    private BigDecimal ivaStandard;
+    private BigDecimal ricaricoBase;
+
     /**
      * Costruttore per mappare direttamente OrdineRisultato -> OrdineRisultatoDto
      */
@@ -84,5 +91,13 @@ public class OrdineRisultatoDto {
         this.dataRisultato = r.getDataRisultato();
         this.prezzo = r.getPrezzo();
         this.quantita = r.getQuantita();
+
+        // 🔹 Parametri di calcolo in camelCase
+        this.prezzoOrarioFisso = r.getPREZZO_ORARIO_FISSO();
+        this.prezzoEffettivo = r.getPREZZO_EFFETTIVO();
+        this.costoOrarioFisso = r.getCOSTO_ORARIO_FISSO();
+        this.costoPersonaleOrarioMedio = r.getCOSTO_PERSONALE_ORARIO_MEDIO();
+        this.ivaStandard = r.getIVA_STANDARD();
+        this.ricaricoBase = r.getRICARICO_BASE();
     }
 }

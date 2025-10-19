@@ -123,8 +123,35 @@ public class OrdineRisultato {
     @Column(nullable = false)
     @Builder.Default
     private BigDecimal quantita = BigDecimal.ZERO;
+
+    
+    @Column(nullable = false, precision = 19, scale = 4)
+    @Builder.Default
+    private BigDecimal PREZZO_EFFETTIVO = BigDecimal.ZERO;
+    
+    @Column(nullable = false, precision = 19, scale = 4)
+    @Builder.Default
+    private BigDecimal PREZZO_ORARIO_FISSO = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 19, scale = 4)
+    @Builder.Default
+    private BigDecimal COSTO_ORARIO_FISSO = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 19, scale = 4)
+    @Builder.Default
+    private BigDecimal COSTO_PERSONALE_ORARIO_MEDIO = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 19, scale = 4)
+    @Builder.Default
+    private BigDecimal IVA_STANDARD = BigDecimal.valueOf(22.0000);
+
+    @Column(nullable = false, precision = 19, scale = 4)
+    @Builder.Default
+    private BigDecimal RICARICO_BASE = BigDecimal.valueOf(20.0000);
+
+
     public static OrdineRisultato createEmpty(Ordine ordine, Articolo articolo, BigDecimal prezzo) {
-        return OrdineRisultato.builder()
+    	return OrdineRisultato.builder()
                 .ordine(ordine)
                 .articolo(articolo)
                 .prezzo(prezzo != null ? prezzo : BigDecimal.ZERO)
@@ -146,4 +173,15 @@ public class OrdineRisultato {
                 .dataRisultato(LocalDateTime.now())
                 .build();
     }
+    @Override
+    public String toString() {
+        return "OrdineRisultato{" +
+                "id=" + id +
+                ", ordineId=" + (ordine != null ? ordine.getId() : null) +
+                ", articoloId=" + (articolo != null ? articolo.getId() : null) +
+                ", quantita=" + quantita +
+                ", prezzo=" + prezzo +
+                '}';
+    }
+
 }

@@ -13,6 +13,6 @@ public interface OrdineRisultatoService {
     List<OrdineRisultatoDto> getAll();
     List<OrdineRisultatoDto> getByOrdineId(Long ordineId);
     void delete(Long id);
-	List<OrdineRisultato> generaRisultatiDaWorks(Long ordineId, BigDecimal prezzo);
+    List<OrdineRisultato> generaRisultatiDaWorks(Long ordineId, OrdineRisultatoDto parametriCalcoloDto);
 	void deleteByOrdineId(Long ordineId);
 }

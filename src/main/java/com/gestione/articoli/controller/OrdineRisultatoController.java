@@ -58,10 +58,10 @@ public class OrdineRisultatoController {
     @PostMapping("/generate/{ordineId}")
     public ResponseEntity<List<OrdineRisultatoDto>> generaRisultati(
             @PathVariable Long ordineId,
-            @RequestParam("prezzo") BigDecimal prezzo // ✅ viene passato come query param
+            @RequestBody OrdineRisultatoDto parametriCalcoloDto // riceve tutti i parametri dal body
     ) {
 
-        List<OrdineRisultato> risultati = service.generaRisultatiDaWorks(ordineId, prezzo);
+        List<OrdineRisultato> risultati = service.generaRisultatiDaWorks(ordineId, parametriCalcoloDto);
 
         List<OrdineRisultatoDto> dtoList = risultati.stream()
                 .map(OrdineRisultatoMapper::toDto)
