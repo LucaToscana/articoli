@@ -32,6 +32,9 @@ public interface WorkService {
 	List<WorkDto> getInProgressLottoWorksWithOrderInProgress();
 	List<WorkDto> getLottoWorks();
 
+	List<WorkDto> getStepsByWork(Long id);
+
+	
     long calculateTotalWorkSeconds(Long orderArticleId);
     TotalWorkTimeDto getTotalWorkTimeDto(Long orderArticleId);
 

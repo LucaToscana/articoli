@@ -255,4 +255,22 @@ public class WorkController {
         WorkStatus status = WorkStatus.valueOf(statusStr.toUpperCase());
         return ResponseEntity.ok(workService.transitionWork(workId, status));
     }
+    
+    
+    /**
+     * Recupera tutti gli step (lavorazioni) collegati a una work.
+     *
+     * @param id ID della work principale
+     * @return Lista di WorkDto o 404 se non trovati
+     */
+    @GetMapping("/{id}/steps")
+    public ResponseEntity<List<WorkDto>> getStepsByWork(@PathVariable Long id) {
+        List<WorkDto> steps = workService.getStepsByWork(id);
+
+        if (steps == null || steps.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(steps);
+    }
 }

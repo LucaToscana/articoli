@@ -6,6 +6,8 @@ import com.gestione.articoli.dto.UserDto;
 import com.gestione.articoli.dto.WorkDto;
 import com.gestione.articoli.dto.WorkIdPosizioneProjection;
 import com.gestione.articoli.dto.WorkSummaryProjection;
+import com.gestione.articoli.mapper.ArticoloMapper;
+import com.gestione.articoli.mapper.OrdineArticoloMapper;
 import com.gestione.articoli.mapper.WorkMapper;
 import com.gestione.articoli.model.*;
 import com.gestione.articoli.repository.*;
@@ -256,10 +258,31 @@ public class WorkServiceImpl implements WorkService {
 	    // Elimina tutte
 	    workRepository.deleteAll(lavoriDaEliminare);
 
-	    System.out.println("✅ Eliminati " + lavoriDaEliminare.size() +
-	            " lavori per ordineArticolo ID: " + ordineArticolo.getId() +
-	            ", originalStartTime: " + originalStartTime +
-	            " e activity: " + activityType);
+	}
+
+	@Override
+	public List<WorkDto> getStepsByWork(Long id) {
+	    // Recupera la work principale
+	    Work work = workRepository.findById(id)
+	            .orElseThrow(() -> new RuntimeException("Work non trovata con id " + id));
+
+	    OrdineArticolo ordineArticolo = work.getOrderArticle();
+	    LocalDateTime originalStartTime = work.getOriginalStartTime();
+	    WorkActivityType activityType = work.getActivity();
+
+	    if (ordineArticolo == null || originalStartTime == null || activityType == null) {
+	        throw new RuntimeException("Work senza ordine, originalStartTime o activityType non impostato");
+	    }
+
+	    // Recupera tutte le lavorazioni con stesso ordine, stesso originalStartTime e stessa activity
+	    List<Work> lavoriDaVisualizzare = workRepository
+	            .findByOrderArticleAndOriginalStartTimeAndActivity(ordineArticolo, originalStartTime, activityType);
+
+
+	    List<WorkDto> lavoriDto = lavoriDaVisualizzare.stream()
+	            .map(WorkMapper::toDto)
+	            .toList();
+        return lavoriDto ;
 	}
 
 
@@ -475,15 +498,45 @@ public class WorkServiceImpl implements WorkService {
 	                WorkIdPosizioneProjection::getWorkId,
 	                Collectors.mapping(WorkIdPosizioneProjection::getPosizione, Collectors.toList())
 	            ));
+	    List<WorkDto> summariesWithPositions = summaries.stream()
+        .map(summary -> {
+            WorkDto dto = WorkMapper.workSummaryProjectionToDto(summary);
+            dto.setPosizioni(posizioniMap.getOrDefault(summary.getId(), List.of()));
+            return dto;
+        })
+        .toList();
+	    
+	 // 1️⃣ Estrai tutti gli orderArticleId e articoloId
+	    Set<Long> orderArticleIds = summariesWithPositions.stream()
+	            .map(WorkDto::getOrderArticleId)
+	            .collect(Collectors.toSet());
 
+	    Set<Long> articoloIds = summariesWithPositions.stream()
+	            .map(dto -> dto.getArticolo().getId())
+	            .collect(Collectors.toSet());
+
+	    // 2️⃣ Recupera tutti gli OrdineArticolo in un'unica query
+	    Map<Long, OrdineArticolo> orderArticleMap = ordineArticoloRepository.findAllById(orderArticleIds)
+	            .stream()
+	            .collect(Collectors.toMap(OrdineArticolo::getId, oa -> oa));
+
+	    // 3️⃣ Recupera tutti gli Articolo in un'unica query
+	    Map<Long, Articolo> articoloMap = articoloRepository.findAllById(articoloIds)
+	            .stream()
+	            .collect(Collectors.toMap(Articolo::getId, a -> a));
+
+	    // 4️⃣ Mappa i dati nei DTO
+	    for (WorkDto dto : summariesWithPositions) {
+	        OrdineArticolo oa = orderArticleMap.get(dto.getOrderArticleId());
+	        if (oa == null) throw new RuntimeException("OrdineArticolo non trovato con id " + dto.getOrderArticleId());
+	        dto.setOrdineArticolo(OrdineArticoloMapper.toDto(oa));
+
+	        Articolo articolo = articoloMap.get(dto.getArticolo().getId());
+	        if (articolo == null) throw new RuntimeException("Articolo non trovato con id " + dto.getArticolo().getId());
+	        dto.setArticolo(ArticoloMapper.toDto(articolo));
+	    }
 	    // 5️⃣ Mappa i summary nei DTO e assegna le posizioni
-	    return summaries.stream()
-	            .map(summary -> {
-	                WorkDto dto = WorkMapper.workSummaryProjectionToDto(summary);
-	                dto.setPosizioni(posizioniMap.getOrDefault(summary.getId(), List.of()));
-	                return dto;
-	            })
-	            .toList();
+	    return summariesWithPositions;
 	}
 
 
