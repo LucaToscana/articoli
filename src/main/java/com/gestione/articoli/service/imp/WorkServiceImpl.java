@@ -89,7 +89,8 @@ public class WorkServiceImpl implements WorkService {
 	@Override
 	public WorkDto startWork(StartWorkDto dto) {
 		Work operatorWork = new Work();
-
+		User manager = userService.getAuthenticatedUser();
+		operatorWork.setManager(manager);
 		Work work = workRepository.findById(dto.getWorkId())
 				.orElseThrow(() -> new RuntimeException("Lavoro non trovato con ID: " + dto.getWorkId()));
 
