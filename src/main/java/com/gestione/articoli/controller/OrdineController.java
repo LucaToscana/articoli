@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.gestione.articoli.dto.ArticoloDto;
 import com.gestione.articoli.dto.ArticoloHierarchyDto;
 import com.gestione.articoli.dto.FastOrderDto;
+import com.gestione.articoli.dto.OrdineArticoloPrezzoDto;
 import com.gestione.articoli.dto.OrdineDto;
 import com.gestione.articoli.service.OrdineService;
 
@@ -66,4 +67,25 @@ public class OrdineController {
 		return ResponseEntity.ok(articoli);
 	}
 
+    /**
+     * Recupera la lista di prezzi unitari per più articoli di un ordine
+     */
+    @PostMapping("/prezzi")
+    public ResponseEntity<?> aggiornaPrezziUnitari(@RequestBody List<OrdineArticoloPrezzoDto> prezziDtoList) {
+        try {
+            ordineService.aggiornaPrezziCreaDatiFattura(prezziDtoList);
+            return ResponseEntity.ok("Prezzi aggiornati correttamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Errore durante l'aggiornamento dei prezzi: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Recupera i prezzi unitari di un ordine specifico
+     */
+    @GetMapping("/{ordineId}/prezzi")
+    public ResponseEntity<List<OrdineArticoloPrezzoDto>> getPrezziByOrdine(@PathVariable Long ordineId) {
+        List<OrdineArticoloPrezzoDto> prezziList = ordineService.getPrezziByOrdine(ordineId);
+        return ResponseEntity.ok(prezziList);
+    }
 }

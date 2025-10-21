@@ -3,6 +3,7 @@ package com.gestione.articoli.service;
 import com.gestione.articoli.dto.ArticoloDto;
 import com.gestione.articoli.dto.ArticoloHierarchyDto;
 import com.gestione.articoli.dto.FastOrderDto;
+import com.gestione.articoli.dto.OrdineArticoloPrezzoDto;
 import com.gestione.articoli.dto.OrdineDto;
 
 import java.util.List;
@@ -22,4 +23,8 @@ public interface OrdineService {
 	List<ArticoloHierarchyDto> getGerarchiaArticoliByOrdineId(Long ordineId);
 
 	ArticoloDto createFastOrder(FastOrderDto dto);
+
+	List<OrdineArticoloPrezzoDto> getPrezziByOrdine(Long ordineId);
+
+	void aggiornaPrezziCreaDatiFattura(List<OrdineArticoloPrezzoDto> prezziDtoList);
 }

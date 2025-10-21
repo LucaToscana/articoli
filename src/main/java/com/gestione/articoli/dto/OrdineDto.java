@@ -2,6 +2,7 @@ package com.gestione.articoli.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -23,4 +24,18 @@ public class OrdineDto {
     private String nomeDocumento;
     private WorkStatus workStatus; 
     private Set<OrdineArticoloDto> articoli;
+    private LocalDateTime dataFattura;
+
+    private String numeroFattura;
+
+    // Costi e parametri
+    private BigDecimal costoOrario;
+    private BigDecimal costoPersonaleMedio;
+    private BigDecimal iva;
+    private BigDecimal ricaricoBase;
+
+    // Totali della fattura
+    private BigDecimal totaleNetto;
+    private BigDecimal totaleIva;
+    private BigDecimal totaleLordo;
 }

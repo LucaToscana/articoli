@@ -5,6 +5,7 @@ import com.gestione.articoli.dto.ArticoloHierarchyDto;
 import com.gestione.articoli.dto.FastOrderDto;
 import com.gestione.articoli.dto.OrderWithWorksDto;
 import com.gestione.articoli.dto.OrdineArticoloDto;
+import com.gestione.articoli.dto.OrdineArticoloPrezzoDto;
 import com.gestione.articoli.dto.OrdineDto;
 import com.gestione.articoli.dto.WorkDto;
 import com.gestione.articoli.exception.BusinessException;
@@ -16,6 +17,7 @@ import com.gestione.articoli.model.Articolo;
 import com.gestione.articoli.model.Azienda;
 import com.gestione.articoli.model.Ordine;
 import com.gestione.articoli.model.OrdineArticolo;
+import com.gestione.articoli.model.OrdineRisultato;
 import com.gestione.articoli.model.WorkActivityType;
 import com.gestione.articoli.model.WorkStatus;
 import com.gestione.articoli.repository.ArticoloRepository;
@@ -36,11 +38,14 @@ import org.springframework.data.convert.DtoInstantiatingConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -253,5 +258,115 @@ public class OrdineServiceImpl implements OrdineService {
 		}
 		return newArticle;
 	}
+
+	@Override
+	public List<OrdineArticoloPrezzoDto> getPrezziByOrdine(Long ordineId) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	@Transactional
+	public void aggiornaPrezziCreaDatiFattura(List<OrdineArticoloPrezzoDto> prezziDtoList) {
+	    if (prezziDtoList == null || prezziDtoList.isEmpty()) {
+	        throw new RuntimeException("La lista dei prezzi è vuota");
+	    }
+
+	    Long idOrdine = (prezziDtoList != null && !prezziDtoList.isEmpty())
+	            ? prezziDtoList.get(0).getOrdineId()
+	            : null;
+
+	    if (idOrdine == null) {
+	        throw new RuntimeException("Lista dei prezzi vuota o ordineId mancante.");
+	    }
+
+
+	    // 🔹 Recupera ordine
+	    Ordine ordine = ordineRepository.findById(idOrdine)
+	            .orElseThrow(() -> new RuntimeException("Ordine non trovato con id " + idOrdine));
+
+	    // 🔹 Recupera dati di base dal risultato ordine
+	    List<OrdineRisultato> risultati = ordineRisultatoRepository.findByOrdineId(idOrdine);
+	    if (risultati.isEmpty()) {
+	        throw new RuntimeException("Nessun risultato ordine trovato per l'ordine " + idOrdine);
+	    }
+
+	    OrdineRisultato risultato = Optional.ofNullable(risultati)
+	            .filter(list -> !list.isEmpty())
+	            .map(list -> list.get(0))
+	            .orElseThrow(() -> new RuntimeException("Nessun risultato trovato per l'ordine richiesto."));	    BigDecimal costoOrario = risultato.getCOSTO_ORARIO_FISSO();
+	    BigDecimal costoPersonale = risultato.getCOSTO_PERSONALE_ORARIO_MEDIO();
+	    BigDecimal ivaPercentuale = risultato.getIVA_STANDARD();
+	    BigDecimal ricaricoBase = risultato.getRICARICO_BASE();
+
+	    // 🔹 Imposta dati di fattura sull’ordine
+	    LocalDateTime dataFattura = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+	    String numeroFattura = ordine.generaNumeroFattura();
+
+	    ordine.setNumeroFattura(numeroFattura);
+	    ordine.setCostoOrario(costoOrario);
+	    ordine.setCostoPersonaleMedio(costoPersonale);
+	    ordine.setIva(ivaPercentuale);
+	    ordine.setRicaricoBase(ricaricoBase);
+	    ordine.setDataFattura(dataFattura);
+
+	    // 🔹 Totali iniziali
+	    BigDecimal totaleNetto = BigDecimal.ZERO;
+	    BigDecimal totaleIva = BigDecimal.ZERO;
+	    BigDecimal totaleLordo = BigDecimal.ZERO;
+
+	    // 🔹 Calcolo per ogni articolo
+	    for (OrdineArticolo articolo : ordine.getArticoli()) {
+
+	        // Cerca il corrispondente nella lista DTO
+	        OrdineArticoloPrezzoDto dto = prezziDtoList.stream()
+	                .filter(p -> p.getArticoloId().equals(articolo.getArticolo().getId()))
+	                .findFirst()
+	                .orElse(null);
+
+	        if (dto == null) continue;
+
+	        // Prezzo unitario
+	        BigDecimal prezzoUnitario = dto.getPrezzoUnitario() != null ? dto.getPrezzoUnitario() : BigDecimal.ZERO;
+	        articolo.setPrezzo(prezzoUnitario);
+
+	        // IVA unitaria = prezzoUnitario * (ivaPercentuale / 100)
+	        BigDecimal ivaUnitaria = prezzoUnitario
+	                .multiply(ivaPercentuale)
+	                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+	                .setScale(2, RoundingMode.HALF_UP);
+	        articolo.setIva(ivaUnitaria);
+	        // Prezzo lordo unitario = prezzo + iva
+	        BigDecimal prezzoLordoUnitario = prezzoUnitario.add(ivaUnitaria);
+	        articolo.setPrezzoLordo(prezzoLordoUnitario);
+	        // Totale per la quantità
+	        BigDecimal quantita = BigDecimal.valueOf(articolo.getQuantita());
+	        BigDecimal totaleArticoloNetto = prezzoUnitario.multiply(quantita);
+	        BigDecimal totaleArticoloIva = ivaUnitaria.multiply(quantita);
+	        BigDecimal totaleArticoloLordo = prezzoLordoUnitario.multiply(quantita);
+
+	        // Somma ai totali complessivi
+	        totaleNetto = totaleNetto.add(totaleArticoloNetto);
+	        totaleIva = totaleIva.add(totaleArticoloIva);
+	        totaleLordo = totaleLordo.add(totaleArticoloLordo);
+
+	        // Salva articolo aggiornato
+	        ordineArticoloRepository.save(articolo);
+	    }
+
+	    // 🔹 Arrotondamenti finali
+	    totaleNetto = totaleNetto.setScale(2, RoundingMode.HALF_UP);
+	    totaleIva = totaleIva.setScale(2, RoundingMode.HALF_UP);
+	    totaleLordo = totaleLordo.setScale(2, RoundingMode.HALF_UP);
+
+	    // 🔹 Imposta totali sull’ordine
+	    ordine.setTotaleNetto(totaleNetto);
+	    ordine.setTotaleIva(totaleIva);
+	    ordine.setTotaleLordo(totaleLordo);
+
+	    // 🔹 Salva ordine aggiornato
+	    ordineRepository.save(ordine);
+	}
+
 
 }

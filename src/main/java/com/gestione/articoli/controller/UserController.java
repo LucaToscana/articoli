@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -42,6 +43,12 @@ public class UserController {
 	@GetMapping("/operators")
 	public ResponseEntity<List<UserDto>> getActiveOperators() {
 		return ResponseEntity.ok(userService.getAllActiveOperators());
+	}
+	
+	// Recupera solo operatori attivi senza ruoli
+	@GetMapping("/operators-salary")
+	public ResponseEntity<List<OperatorDto>> getActiveOperatorsWithSalary() {
+		return ResponseEntity.ok(userService.getOperatoriAttivi());
 	}
 
 	// Recupera utente per ID

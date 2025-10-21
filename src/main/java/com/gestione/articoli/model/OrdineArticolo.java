@@ -2,6 +2,8 @@ package com.gestione.articoli.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +29,19 @@ public class OrdineArticolo {
 
     @Column(nullable = false)
     private int quantita;
-
+    
+    @Column(nullable = true)
+    @Builder.Default
+    private BigDecimal prezzo = BigDecimal.ZERO;
+    
+    @Column(nullable = true)
+    @Builder.Default
+    private BigDecimal iva = BigDecimal.ZERO;
+    
+    @Column(nullable = true)
+    @Builder.Default
+    private BigDecimal prezzoLordo = BigDecimal.ZERO;
+    
     // Lista delle lavorazioni associate a questo ordine-articolo
     @OneToMany(mappedBy = "orderArticle", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

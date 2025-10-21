@@ -26,7 +26,10 @@ public class OrdineArticoloMapper {
                 .aziendaId(entity.getArticolo() != null && entity.getArticolo().getAzienda() != null
                         ? entity.getArticolo().getAzienda().getId() : null)
                 .aziendaNome(entity.getArticolo() != null && entity.getArticolo().getAzienda() != null
-                        ? entity.getArticolo().getAzienda().getNome() : null)
+                        ? entity.getArticolo().getAzienda().getNome() : null).
+                prezzo(entity.getPrezzo()).
+                prezzoLordo(entity.getPrezzoLordo()).
+                iva(entity.getIva())
                 .build();
     }
 

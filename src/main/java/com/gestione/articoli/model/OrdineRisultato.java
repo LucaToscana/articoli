@@ -147,7 +147,7 @@ public class OrdineRisultato {
 
     @Column(nullable = false, precision = 19, scale = 4)
     @Builder.Default
-    private BigDecimal RICARICO_BASE = BigDecimal.valueOf(20.0000);
+    private BigDecimal RICARICO_BASE = BigDecimal.valueOf(200.0000);
 
 
     public static OrdineRisultato createEmpty(Ordine ordine, Articolo articolo, BigDecimal prezzo) {

@@ -21,6 +21,7 @@ public class ArticoloHierarchyMapper {
 		ArticoloHierarchyDto dto = new ArticoloHierarchyDto();
 		dto.setId(articolo.getId());
 		dto.setCodice(articolo.getCodice());
+		dto.setCodiceComponente(articolo.getCodiceComponente());
 		dto.setDescrizione(articolo.getDescrizione());
 		dto.setAziendaNome(articolo.getAzienda() != null ? articolo.getAzienda().getNome() : null);
 

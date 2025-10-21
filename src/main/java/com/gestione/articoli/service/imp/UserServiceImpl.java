@@ -312,5 +312,17 @@ public class UserServiceImpl implements UserService {
                 java.math.RoundingMode.CEILING );
         return media ;
     }
-
+    
+    public List<OperatorDto> getOperatoriAttivi() {
+        return userRepository.findByRolesIsEmptyAndActiveInCompanyTrueOrderByUsernameAsc()
+            .stream()
+            .map(u -> OperatorDto.builder()
+                    .id(u.getId())
+                    .username(u.getUsername())
+                    .activeInCompany(u.isActiveInCompany())
+                    .machineUser(u.isMachineUser())
+                    .retribuzioneOraria(u.getRetribuzioneOraria())
+                    .build())
+            .collect(Collectors.toList());
+    }
 }

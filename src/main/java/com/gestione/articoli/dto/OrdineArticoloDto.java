@@ -1,5 +1,8 @@
 package com.gestione.articoli.dto;
 
+import java.math.BigDecimal;
+
+import jakarta.persistence.Column;
 import lombok.*;
 
 @Data
@@ -22,4 +25,9 @@ public class OrdineArticoloDto {
     
     private Long aziendaId;
     private String aziendaNome;
+    BigDecimal prezzo;
+
+    private BigDecimal iva = BigDecimal.ZERO;
+
+    private BigDecimal prezzoLordo = BigDecimal.ZERO;
 }

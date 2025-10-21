@@ -2,6 +2,7 @@ package com.gestione.articoli.service;
 
 import com.gestione.articoli.dto.InactiveUsersDto;
 import com.gestione.articoli.dto.LavorazioneDto;
+import com.gestione.articoli.dto.OperatorDto;
 import com.gestione.articoli.dto.UserDto;
 import com.gestione.articoli.model.User;
 
@@ -51,5 +52,7 @@ public interface UserService {
 	void addLavorazioneToUser(Long id, Long lavorazioneId);
 
 	BigDecimal getCostoPersonaleMedio();
+
+	List<OperatorDto> getOperatoriAttivi();
 
 }
