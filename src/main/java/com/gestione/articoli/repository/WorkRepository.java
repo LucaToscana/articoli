@@ -175,7 +175,9 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
                    "PARTITION BY w.order_article_id, w.articolo_id, w.activity, w.specifiche, " +
                    "w.grana, w.pasta_colore, w.operator_id, w.operator2_id, w.operator3_id, w.original_start_time " +
                    "ORDER BY w.start_time DESC) AS rn, " +
-                   "SUM(CASE WHEN w.status = 'IN_PROGRESS' THEN EXTRACT(EPOCH FROM (COALESCE(w.end_time, NOW()) - w.start_time))/60 ELSE 0 END) " +
+                   "SUM(CASE WHEN w.status = 'IN_PROGRESS' " +
+                   "THEN EXTRACT(EPOCH FROM (COALESCE(w.end_time, NOW() AT TIME ZONE 'Europe/Rome') - w.start_time))/60 " +
+                   "ELSE 0 END) " +                   
                    "OVER (PARTITION BY w.order_article_id, w.articolo_id, w.activity, w.specifiche, " +
                    "w.grana, w.pasta_colore, w.operator_id, w.operator2_id, w.operator3_id, w.original_start_time) AS total_minutes " +
                    "FROM works w " +
@@ -194,7 +196,9 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
                    "PARTITION BY w.order_article_id, w.articolo_id, w.activity, w.specifiche, " +
                    "w.grana, w.pasta_colore, w.operator_id, w.operator2_id, w.operator3_id, w.original_start_time " +
                    "ORDER BY w.start_time DESC) AS rn, " +
-                   "SUM(CASE WHEN w.status = 'IN_PROGRESS' THEN EXTRACT(EPOCH FROM (COALESCE(w.end_time, NOW()) - w.start_time))/60 ELSE 0 END) " +
+                   "SUM(CASE WHEN w.status = 'IN_PROGRESS' " +
+                   "THEN EXTRACT(EPOCH FROM (COALESCE(w.end_time, NOW() AT TIME ZONE 'Europe/Rome') - w.start_time))/60 " +
+                   "ELSE 0 END) " +                   
                    "OVER (PARTITION BY w.order_article_id, w.articolo_id, w.activity, w.specifiche, " +
                    "w.grana, w.pasta_colore, w.operator_id, w.operator2_id, w.operator3_id, w.original_start_time) AS total_minutes " +
                    "FROM works w " +

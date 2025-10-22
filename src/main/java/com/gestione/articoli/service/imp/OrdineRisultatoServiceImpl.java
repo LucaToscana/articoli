@@ -52,7 +52,10 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 	@Override
 	@Transactional
 	public void deleteByOrdineId(Long ordineId) {
-		repository.deleteByOrdineId(ordineId);
+		Ordine ordine = ordineRepository.findById(ordineId).orElseThrow(
+				() -> new EntityNotFoundException("Ordine non trovato: " + ordineId));
+		ordine.setNumeroFattura(null);
+        repository.deleteByOrdineId(ordineId);
 	}
 
 	@Override
