@@ -28,6 +28,7 @@ public class OrdineArticoloDto {
     BigDecimal prezzo;
 
     private BigDecimal iva = BigDecimal.ZERO;
-
     private BigDecimal prezzoLordo = BigDecimal.ZERO;
+    private BigDecimal totaleMinutiLavorazioni = BigDecimal.ZERO;
+    
 }

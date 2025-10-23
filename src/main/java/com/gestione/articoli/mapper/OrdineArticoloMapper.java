@@ -29,6 +29,7 @@ public class OrdineArticoloMapper {
                         ? entity.getArticolo().getAzienda().getNome() : null).
                 prezzo(entity.getPrezzo()).
                 prezzoLordo(entity.getPrezzoLordo()).
+                totaleMinutiLavorazioni(entity.getTotaleMinutiLavorazioni()).
                 iva(entity.getIva())
                 .build();
     }
@@ -39,6 +40,7 @@ public class OrdineArticoloMapper {
         return OrdineArticolo.builder()
                 .id(dto.getId())
                 .quantita(dto.getQuantita())
+                .totaleMinutiLavorazioni(dto.getTotaleMinutiLavorazioni())
                 // Ordine e Articolo devono essere settati nel service
                 .build();
     }

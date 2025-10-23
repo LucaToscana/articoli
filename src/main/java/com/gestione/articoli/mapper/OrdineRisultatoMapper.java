@@ -15,7 +15,6 @@ public class OrdineRisultatoMapper {
 	            .id(entity.getId())
 	            .ordineId(entity.getOrdine().getId())
 	            .articoloId(entity.getArticolo().getId())
-
 	            .molaturaReale(entity.getMolaturaReale())
 	            .molaturaFatturabile(entity.getMolaturaFatturabile())
 	            .lucidaturaReale(entity.getLucidaturaReale())

@@ -40,6 +40,7 @@ public class OrdineMapper {
 		        .totaleNetto(dto.getTotaleNetto() != null ? dto.getTotaleNetto() : BigDecimal.ZERO)
 		        .totaleIva(dto.getTotaleIva() != null ? dto.getTotaleIva() : BigDecimal.ZERO)
 		        .totaleLordo(dto.getTotaleLordo() != null ? dto.getTotaleLordo() : BigDecimal.ZERO)
+		        .totaleMinutiLavorazioni(dto.getTotaleMinutiLavorazioni())
 		        .azienda(azienda)
 		        .hasDdt(dto.isHasDdt())
 		        .workStatus(dto.getWorkStatus() != null ? dto.getWorkStatus() : WorkStatus.PAUSED)
@@ -78,6 +79,7 @@ public class OrdineMapper {
 			    .totaleNetto(ordine.getTotaleNetto())
 			    .totaleIva(ordine.getTotaleIva())
 			    .totaleLordo(ordine.getTotaleLordo())
+			    .totaleMinutiLavorazioni(ordine.getTotaleMinutiLavorazioni())
 			    .aziendaId(ordine.getAzienda().getId())
 			    .nomeAzienda(ordine.getAzienda().getNome())
 			    .workStatus(ordine.getWorkStatus())
@@ -96,6 +98,7 @@ public class OrdineMapper {
 					dto.setArticoloCodice(articolo.getCodice());
 					dto.setArticoloCodiceComponente(articolo.getCodiceComponente());
 					dto.setArticoloDescrizione(articolo.getDescrizione());
+					dto.setTotaleMinutiLavorazioni(oa.getTotaleMinutiLavorazioni());
 					if (articolo.getImmagine() != null) {
 						dto.setArticoloImmagineBase64(
 								java.util.Base64.getEncoder().encodeToString(articolo.getImmagine()));

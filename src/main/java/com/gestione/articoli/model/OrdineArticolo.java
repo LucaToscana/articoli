@@ -42,6 +42,11 @@ public class OrdineArticolo {
     @Builder.Default
     private BigDecimal prezzoLordo = BigDecimal.ZERO;
     
+    @Builder.Default
+    @Column(nullable = true)
+    private BigDecimal totaleMinutiLavorazioni = BigDecimal.ZERO;
+    
+    
     // Lista delle lavorazioni associate a questo ordine-articolo
     @OneToMany(mappedBy = "orderArticle", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

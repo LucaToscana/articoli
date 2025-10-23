@@ -1,17 +1,22 @@
 package com.gestione.articoli.service.imp;
 
 import com.gestione.articoli.dto.OrdineArticoloDto;
+import com.gestione.articoli.dto.OrdineArticoloPrezzoDto;
 import com.gestione.articoli.dto.OrdineRisultatoDto;
 import com.gestione.articoli.dto.WorkDto;
+import com.gestione.articoli.mapper.OrdineMapper;
 import com.gestione.articoli.mapper.OrdineRisultatoMapper;
 import com.gestione.articoli.model.Articolo;
 import com.gestione.articoli.model.Ordine;
+import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.model.OrdineRisultato;
 import com.gestione.articoli.repository.ArticoloRepository;
+import com.gestione.articoli.repository.OrdineArticoloRepository;
 import com.gestione.articoli.repository.OrdineRepository;
 import com.gestione.articoli.repository.OrdineRisultatoRepository;
 import com.gestione.articoli.service.OrdineArticoloService;
 import com.gestione.articoli.service.OrdineRisultatoService;
+import com.gestione.articoli.service.OrdineService;
 import com.gestione.articoli.service.WorkService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -20,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,10 +38,12 @@ import java.util.stream.Collectors;
 public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 
 	private final OrdineRisultatoRepository repository;
+	private final OrdineService ordineService;
 	private final WorkService workService;
 	private final OrdineRepository ordineRepository;
 	private final ArticoloRepository articoloRepository;
 	private final OrdineArticoloService ordineArticoloService;
+	private final OrdineArticoloRepository ordineArticoloRepository;
 
 	@Override
 	public OrdineRisultatoDto save(OrdineRisultatoDto dto) {
@@ -142,6 +150,7 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 				.collect(Collectors.groupingBy(w -> w.getOrdineArticolo().getId()));
 
 		List<OrdineRisultato> risultati = new ArrayList<>();
+        BigDecimal totaleMinutiReali = BigDecimal.ZERO;
 
 		// 🔹 6. Genera risultati per ogni OrdineArticolo
 		for (OrdineArticoloDto ordineArticolo : articoliOrdine) {
@@ -150,16 +159,19 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 
 			Articolo articolo = articoloRepository.findById(ordineArticolo.getArticoloId()).orElseThrow(
 					() -> new EntityNotFoundException("Articolo non trovato: " + ordineArticolo.getArticoloId()));
+		    BigDecimal totaleMinutiRealiArticolo = BigDecimal.ZERO;
 
 			OrdineRisultato risultato = OrdineRisultato.createEmpty(ordine, articolo,
 					parametriCalcoloDto.getPrezzoOrarioFisso());
 
 			// Quantità totale dell’articolo nell’ordine
 			risultato.setQuantita(BigDecimal.valueOf(ordineArticolo.getQuantita()));
-			System.out.println(risultato);
+
 			// 🔹 7. Calcolo minuti reali e fatturabili per ogni attività
 			for (WorkDto w : lavori) {
 				BigDecimal durataReale = w.getTotalMinutes() != null ? w.getTotalMinutes() : BigDecimal.ZERO;
+	            totaleMinutiReali = totaleMinutiReali.add(durataReale);
+	            totaleMinutiRealiArticolo = totaleMinutiRealiArticolo.add(durataReale);  // totale per articolo
 
 				int operatorCount = 0;
 				if (w.getOperator() != null)
@@ -214,10 +226,55 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 			risultato.setPREZZO_ORARIO_FISSO(parametriCalcoloDto.getPrezzoOrarioFisso());
 			risultato.setPREZZO_EFFETTIVO(parametriCalcoloDto.getPrezzoOrarioFisso());
 			risultati.add(risultato);
-		}
+			
+			OrdineArticolo articoloOrdine = ordineArticoloRepository.findById(ordineArticoloId)
+				    .orElseThrow(() -> new EntityNotFoundException("OrdineArticolo non trovato con id: " + ordineArticoloId));
 
-		// 🔹 8. Salva tutti i risultati
-		return repository.saveAll(risultati);
+				// Imposta totale minuti
+				articoloOrdine.setTotaleMinutiLavorazioni(totaleMinutiRealiArticolo);
+
+				// Calcolo: (totaleMinutiRealiArticolo / 60) * prezzoOrarioFisso / quantita
+				BigDecimal minutiInOre = totaleMinutiRealiArticolo
+				    .divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
+
+				BigDecimal prezzoOrarioFisso = parametriCalcoloDto.getPrezzoOrarioFisso() != null
+				    ? parametriCalcoloDto.getPrezzoOrarioFisso()
+				    : BigDecimal.ZERO;
+
+				BigDecimal quantita = BigDecimal.valueOf(articoloOrdine.getQuantita());
+
+				// costo unitario = (minutiInOre * prezzoOrarioFisso) / quantita
+				BigDecimal prezzoUnitario = minutiInOre
+				    .multiply(prezzoOrarioFisso)
+				    .divide(quantita, 2, RoundingMode.HALF_UP);
+
+				System.out.println(">>> Costo unitario calcolato: " + prezzoUnitario);
+
+				// Se vuoi salvarlo in un campo, puoi farlo così:
+				articoloOrdine.setPrezzo(prezzoUnitario);
+
+			ordineArticoloRepository.save(articoloOrdine);
+		}
+		// 🔹 9. Salva tutti i risultati nel repository
+		List<OrdineRisultato> risultatiSalvati = repository.saveAll(risultati);
+		articoliOrdine = ordineArticoloService.getAllOrdineArticoliByOrdineId(ordineId);
+		// 🔹 10. Aggiorna i prezzi unitari degli articoli nell’ordine
+		List<OrdineArticoloPrezzoDto> prezziDtoList = articoliOrdine.stream()
+		    .map(a -> new OrdineArticoloPrezzoDto(
+		        a.getOrdineId(),
+		        a.getArticoloId(),
+		        a.getPrezzo()
+		    ))
+		    .collect(Collectors.toList());
+
+		ordineService.aggiornaPrezziCreaDatiFattura(prezziDtoList);
+		ordine = ordineRepository.findById(ordineId)
+				.orElseThrow(() -> new EntityNotFoundException("Ordine non trovato con id: " + ordineId));
+        ordine.setTotaleMinutiLavorazioni(totaleMinutiReali);
+        ordineRepository.save(ordine);
+		// 🔹 11. Ritorna i risultati salvati
+		return risultatiSalvati;
+		
 	}
 
 }

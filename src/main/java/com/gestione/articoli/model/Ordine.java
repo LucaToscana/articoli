@@ -79,6 +79,9 @@ public class Ordine {
     @Builder.Default
     @Column(nullable = true, precision = 19, scale = 2)
     private BigDecimal totaleLordo = BigDecimal.ZERO;
+    @Builder.Default
+    @Column(nullable = true, precision = 19, scale = 2)
+    private BigDecimal totaleMinutiLavorazioni = BigDecimal.ZERO;
     
     @PrePersist
     public void prePersist() {

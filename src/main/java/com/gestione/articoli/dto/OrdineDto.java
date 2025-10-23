@@ -38,4 +38,7 @@ public class OrdineDto {
     private BigDecimal totaleNetto;
     private BigDecimal totaleIva;
     private BigDecimal totaleLordo;
+    
+    private BigDecimal totaleMinutiLavorazioni = BigDecimal.ZERO;
+
 }
