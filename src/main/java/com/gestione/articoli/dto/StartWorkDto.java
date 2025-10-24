@@ -23,5 +23,6 @@ public class StartWorkDto {
     private List<String> posizione;
     private Integer quantita;
     private LocalDateTime startTime;   // nuova
-    private LocalDateTime endTime;     // nuova
+    private LocalDateTime endTime; 
+    private Long postazioneId;// nuova
 }

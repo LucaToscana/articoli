@@ -88,6 +88,13 @@ public class WorkServiceImpl implements WorkService {
 	@Transactional
 	@Override
 	public WorkDto startWork(StartWorkDto dto) {
+	    // Controlla se l'utente ha il ruolo USER (macchina)
+	    boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+	            .stream()
+	            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+	    boolean isUser = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+	            .stream()
+	            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
 		Work operatorWork = new Work();
 		User manager = userService.getAuthenticatedUser();
 		operatorWork.setManager(manager);
@@ -158,7 +165,6 @@ public class WorkServiceImpl implements WorkService {
 			dto.setStartTime(start.withNano(currentNano));
 			dto.setEndTime(end.withNano(currentNano));
 
-// Aggiorna operatorWork
 			operatorWork.setOriginalStartTime(dto.getStartTime());
 			operatorWork.setStartTime(dto.getStartTime());
 			operatorWork.setEndTime(dto.getEndTime());
@@ -168,6 +174,18 @@ public class WorkServiceImpl implements WorkService {
 			operatorWork.setOriginalStartTime(originalStartTime);
 			operatorWork.setStartTime(originalStartTime);
 		}
+		if (!WorkActivityType.DISPONIBILITA_LOTTO.name().equals(dto.getLavorazione()) &&
+			    !WorkActivityType.DISPONIBILITA_LAVORAZIONE.name().equals(dto.getLavorazione()) &&
+			    isAdmin) {
+			    operatorWork.setStatus(WorkStatus.PAUSED);
+			}
+		// Utente standard (postazione 2)
+		if (isUser && dto.getPostazioneId() != null && dto.getPostazioneId() == 2) {
+		    userRepository.findByUsername("user").ifPresent(user -> {
+		        operatorWork.setManager(user);
+		    });
+		}
+
 		workRepository.save(operatorWork);
 		return WorkMapper.toDto(operatorWork);
 	}
