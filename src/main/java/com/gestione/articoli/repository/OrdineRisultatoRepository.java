@@ -24,8 +24,9 @@ public interface OrdineRisultatoRepository extends JpaRepository<OrdineRisultato
     @Query("SELECT r FROM OrdineRisultato r " +
     	       "WHERE r.ordine.dataOrdine >= :start AND r.ordine.dataOrdine <= :end " +
     	       "AND (:aziendaId IS NULL OR r.ordine.azienda.id = :aziendaId) " +
+    	       "AND r.ordine.workStatus = 'COMPLETED' " + 
     	       "ORDER BY r.ordine.dataOrdine ASC")
-    List<OrdineRisultato> findByOrdineDataRangeAndAzienda(
+    List<OrdineRisultato> findOrdiniByDataRangeAndAzienda(
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end,
         @Param("aziendaId") Long aziendaId

@@ -4,11 +4,12 @@ import com.gestione.articoli.dto.OrdineRisultatoDto;
 import com.gestione.articoli.dto.StatisticsDto;
 import com.gestione.articoli.model.Articolo;
 import com.gestione.articoli.model.Ordine;
+import com.gestione.articoli.model.OrdineArticolo;
 import com.gestione.articoli.model.OrdineRisultato;
 import com.gestione.articoli.repository.OrdineRisultatoRepository;
 
-import jakarta.transaction.Transactional;
-
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,144 +21,261 @@ import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class StatisticsService {
 
-	private final OrdineRisultatoRepository repository;
+    private final OrdineRisultatoRepository ordineRisultatoRepository;
 
-	public StatisticsService(OrdineRisultatoRepository repository) {
-		this.repository = repository;
-	}
+    @Transactional(readOnly = true)
+    public StatisticsDto calculateStatistics(LocalDateTime start, LocalDateTime end, Long aziendaId) {
+        List<OrdineRisultato> risultati = ordineRisultatoRepository.findOrdiniByDataRangeAndAzienda(start, end, aziendaId);
 
-	public StatisticsDto calculateStatistics(LocalDateTime start, LocalDateTime end, Long aziendaId) {
+        if (risultati.isEmpty()) {
+            return buildEmptyDto(start, end);
+        }
 
-		// Normalizza start a inizio giorno
-		start = start.with(LocalTime.MIN); // 00:00:00
+        Accumulator acc = accumulateBaseData(risultati);
+        KPI kpi = calculateKPI(acc, risultati.size());
 
-		// Normalizza end a fine giorno
-		LocalDateTime todayEnd = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime().with(LocalTime.MAX);;
+        return buildStatisticsDto(start, end, acc, kpi, risultati.size());
+    }
 
-		if (end.isAfter(todayEnd)) {
-			end = todayEnd;
-		} else {
-			end = end.with(LocalTime.MAX); // fine del giorno selezionato
-		}
+    // ==============================
+    // Sottometodi
+    // ==============================
 
-		// Assicurati che start non sia dopo end
-		if (start.isAfter(end)) {
-			start = end.minusDays(1).with(LocalTime.MIN);
-		}
-		List<OrdineRisultato> results = repository.findByOrdineDataRangeAndAzienda(start, end, aziendaId);
+    private StatisticsDto buildEmptyDto(LocalDateTime start, LocalDateTime end) {
+        return StatisticsDto.builder()
+                .dataInizio(start.toLocalDate())
+                .dataFine(end.toLocalDate())
+                .totaleOrdini(0L)
+                .totaleArticoliVenduti(0L)
+                .totaleRicavoNetto(BigDecimal.ZERO)
+                .totaleRicavoLordo(BigDecimal.ZERO)
+                .totaleCosti(BigDecimal.ZERO)
+                .utileNetto(BigDecimal.ZERO)
+                .costoPersonale(BigDecimal.ZERO)
+                .costoFisso(BigDecimal.ZERO)
+                .totaleOre(BigDecimal.ZERO)
+                .totaleMinuti(BigDecimal.ZERO)
+                .produttivitaOraria(BigDecimal.ZERO)
+                .valoreMedioOrdine(BigDecimal.ZERO)
+                .valoreMedioArticolo(BigDecimal.ZERO)
+                .mediaArticoliOra(BigDecimal.ZERO)
+                .utileMedioArticolo(BigDecimal.ZERO)
+                .utileMedioOrdine(BigDecimal.ZERO)
+                .iva10Percent(BigDecimal.ZERO)
+                .iva22Percent(BigDecimal.ZERO)
+                .build();
+    }
 
-		if (results.isEmpty()) {
-			return StatisticsDto.builder().totaleOrdini(0L).totaleOre(BigDecimal.ZERO).totaleEuro(BigDecimal.ZERO)
-					.mediaArticoliOra(BigDecimal.ZERO).build();
-		}
+    private static class Accumulator {
+        BigDecimal totaleOre = BigDecimal.ZERO;
+        BigDecimal totaleMinuti = BigDecimal.ZERO;
+        BigDecimal totaleArticoli = BigDecimal.ZERO;
+        BigDecimal totaleRicavoNetto = BigDecimal.ZERO;
+        BigDecimal totaleRicavoLordo = BigDecimal.ZERO;
+        BigDecimal totaleIva = BigDecimal.ZERO;
+        BigDecimal totaleCosti = BigDecimal.ZERO;
+        BigDecimal costoPersonale = BigDecimal.ZERO;
+        BigDecimal costoFisso = BigDecimal.ZERO;
+        
+        // Totali per tipo di lavorazione
+        BigDecimal molatura = BigDecimal.ZERO;
+        BigDecimal lucidatura = BigDecimal.ZERO;
+        BigDecimal saldatura = BigDecimal.ZERO;
+        BigDecimal foratura = BigDecimal.ZERO;
+        BigDecimal filettatura = BigDecimal.ZERO;
+        BigDecimal montaggio = BigDecimal.ZERO;
+        BigDecimal scatolatura = BigDecimal.ZERO;
+    }
 
-		BigDecimal totaleOre = BigDecimal.ZERO;
-		BigDecimal totaleEuro = BigDecimal.ZERO;
-		BigDecimal totaleArticoli = BigDecimal.ZERO;
-		// Ottieni il numero di ordini distinti
-		long totaleOrdini = results.stream().map(r -> r.getOrdine().getId()) // prendi solo l'id dell'ordine
-				.distinct() // mantieni solo i valori distinti
-				.count(); // conta quanti ordini distinti ci sono
-		for (OrdineRisultato r : results) {
-			// Somma dei minuti fatturabili usando getter pubblici
-			BigDecimal totaleMinutiFatturabili = r.getMolaturaFatturabile().add(r.getLucidaturaFatturabile())
-					.add(r.getSaldaturaFatturabile()).add(r.getForaturaFatturabile()).add(r.getFilettaturaFatturabile())
-					.add(r.getMontaggioFatturabile()).add(r.getScatolaturaFatturabile());
+    private static class KPI {
+        BigDecimal utileNetto;
+        BigDecimal produttivitaOraria;
+        BigDecimal marginePercentuale;
+        BigDecimal valoreMedioOrdine;
+        BigDecimal valoreMedioArticolo;
+        BigDecimal mediaArticoliOra;
+        BigDecimal utileMedioArticolo;
+        BigDecimal utileMedioOrdine;
+        BigDecimal iva10;
+        BigDecimal iva22;
+    }
 
-			// Conversione in ore per questo record
-			BigDecimal oreRecord = totaleMinutiFatturabili.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    private Accumulator accumulateBaseData(List<OrdineRisultato> risultati) {
+        Accumulator acc = new Accumulator();
 
-			// Somma al totale
-			totaleOre = totaleOre.add(oreRecord);
+        for (OrdineRisultato r : risultati) {
+            Ordine ordine = r.getOrdine();
+            OrdineArticolo ordineArticolo = ordine.getArticoli().stream()
+                    .filter(oa -> oa.getArticolo().getId().equals(r.getArticolo().getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Articolo non trovato nell’ordine"));
 
-			// Calcolo euro per questo record
-			BigDecimal euroRecord = r.getPrezzo().multiply(oreRecord);
-			totaleEuro = totaleEuro.add(euroRecord);
+            BigDecimal minuti = r.getMolaturaFatturabile()
+                    .add(r.getLucidaturaFatturabile())
+                    .add(r.getSaldaturaFatturabile())
+                    .add(r.getForaturaFatturabile())
+                    .add(r.getFilettaturaFatturabile())
+                    .add(r.getMontaggioFatturabile())
+                    .add(r.getScatolaturaFatturabile());
 
-			// Somma articoli
-			totaleArticoli = totaleArticoli.add(r.getQuantita());
-		}
+            acc.totaleMinuti = acc.totaleMinuti.add(minuti);
+            acc.totaleOre = acc.totaleOre.add(minuti.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
 
-		BigDecimal mediaArticoliOra = totaleOre.compareTo(BigDecimal.ZERO) > 0
-				? totaleArticoli.divide(totaleOre, 2, RoundingMode.HALF_UP)
-				: BigDecimal.ZERO;
+            acc.molatura = acc.molatura.add(r.getMolaturaFatturabile());
+            acc.lucidatura = acc.lucidatura.add(r.getLucidaturaFatturabile());
+            acc.saldatura = acc.saldatura.add(r.getSaldaturaFatturabile());
+            acc.foratura = acc.foratura.add(r.getForaturaFatturabile());
+            acc.filettatura = acc.filettatura.add(r.getFilettaturaFatturabile());
+            acc.montaggio = acc.montaggio.add(r.getMontaggioFatturabile());
+            acc.scatolatura = acc.scatolatura.add(r.getScatolaturaFatturabile());
 
-		return StatisticsDto.builder().totaleOrdini(totaleOrdini).totaleOre(totaleOre).totaleEuro(totaleEuro)
-				.mediaArticoliOra(mediaArticoliOra).build();
-	}
+            BigDecimal ricavoNetto = ordineArticolo.getPrezzo().multiply(r.getQuantita());
+            acc.totaleRicavoNetto = acc.totaleRicavoNetto.add(ricavoNetto);
 
-	@Transactional
-	public Map<Long, List<OrdineRisultatoDto>> getOrdiniDettaglio(LocalDateTime start, LocalDateTime end,
-			Long aziendaId) {
-		// prendi tutti i risultati grezzi
-		// Normalizza start a inizio giorno
-		start = start.with(LocalTime.MIN); // 00:00:00
+            BigDecimal ivaPercent = r.getOrdine().getIva() != null ? r.getOrdine().getIva() : r.getIVA_STANDARD();
+            BigDecimal ivaImporto = ricavoNetto.multiply(ivaPercent).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            acc.totaleIva = acc.totaleIva.add(ivaImporto);
+            acc.totaleRicavoLordo = acc.totaleRicavoLordo.add(ricavoNetto.add(ivaImporto));
 
-		// Normalizza end a fine giorno
-		LocalDateTime todayEnd = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime().with(LocalTime.MAX);
+         // Converto i minuti in ore per calcolare correttamente i costi
+            BigDecimal ore = minuti.divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
 
-		if (end.isAfter(todayEnd)) {
-			end = todayEnd;
-		} else {
-			end = end.with(LocalTime.MAX); // fine del giorno selezionato
-		}
+            // Calcolo costi proporzionati alle ore lavorate
+            BigDecimal costoPersEffettivo = r.getCOSTO_PERSONALE_ORARIO_MEDIO().multiply(ore);
+            BigDecimal costoFisEffettivo = r.getCOSTO_ORARIO_FISSO().multiply(ore);
 
-		// Assicurati che start non sia dopo end
-		if (start.isAfter(end)) {
-			start = end.minusDays(1).with(LocalTime.MIN);
-		}
-		List<OrdineRisultato> risultati = repository.findByOrdineDataRangeAndAzienda(start, end, aziendaId);
+            // Aggiorno l'accumulatore
+            acc.costoPersonale = acc.costoPersonale.add(costoPersEffettivo);
+            acc.costoFisso = acc.costoFisso.add(costoFisEffettivo);
+            acc.totaleCosti = acc.totaleCosti.add(costoPersEffettivo).add(costoFisEffettivo);
 
-		// mappa ogni risultato in un DTO
-		List<OrdineRisultatoDto> dtos = risultati.stream().map(r -> {
-			OrdineRisultatoDto dto = new OrdineRisultatoDto();
+            acc.totaleArticoli = acc.totaleArticoli.add(r.getQuantita());
+        }
 
-			dto.setId(r.getId());
-			dto.setMolaturaReale(r.getMolaturaReale());
-			dto.setMolaturaFatturabile(r.getMolaturaFatturabile());
-			dto.setLucidaturaReale(r.getLucidaturaReale());
-			dto.setLucidaturaFatturabile(r.getLucidaturaFatturabile());
-			dto.setSaldaturaReale(r.getSaldaturaReale());
-			dto.setSaldaturaFatturabile(r.getSaldaturaFatturabile());
-			dto.setForaturaReale(r.getForaturaReale());
-			dto.setForaturaFatturabile(r.getForaturaFatturabile());
-			dto.setFilettaturaReale(r.getFilettaturaReale());
-			dto.setFilettaturaFatturabile(r.getFilettaturaFatturabile());
-			dto.setMontaggioReale(r.getMontaggioReale());
-			dto.setMontaggioFatturabile(r.getMontaggioFatturabile());
-			dto.setScatolaturaReale(r.getScatolaturaReale());
-			dto.setScatolaturaFatturabile(r.getScatolaturaFatturabile());
-			dto.setDataRisultato(r.getDataRisultato());
-			dto.setPrezzo(r.getPrezzo());
-			dto.setQuantita(r.getQuantita());
+        return acc;
+    }
+    private KPI calculateKPI(Accumulator acc, int totaleOrdini) {
+        KPI kpi = new KPI();
+        kpi.utileNetto = acc.totaleRicavoNetto.subtract(acc.totaleCosti);
+        kpi.produttivitaOraria = safeDivide(acc.totaleRicavoNetto, acc.totaleOre);
+        kpi.marginePercentuale = safeDivide(kpi.utileNetto.multiply(BigDecimal.valueOf(100)), acc.totaleRicavoNetto);
+        kpi.valoreMedioOrdine = safeDivide(acc.totaleRicavoNetto, BigDecimal.valueOf(totaleOrdini));
+        kpi.valoreMedioArticolo = safeDivide(acc.totaleRicavoNetto, acc.totaleArticoli);
+        kpi.mediaArticoliOra = safeDivide(acc.totaleArticoli, acc.totaleOre);
+        kpi.utileMedioArticolo = safeDivide(kpi.utileNetto, acc.totaleArticoli);
+        kpi.utileMedioOrdine = safeDivide(kpi.utileNetto, BigDecimal.valueOf(totaleOrdini));
+        kpi.iva10 = acc.totaleRicavoNetto.multiply(BigDecimal.valueOf(0.10));
+        kpi.iva22 = acc.totaleRicavoNetto.multiply(BigDecimal.valueOf(0.22));
+        return kpi;
+    }
 
-			Ordine o = r.getOrdine();
-			dto.setOrdineId(o.getId());
-			dto.setWorkStatus(o.getWorkStatus());
-			dto.setDataOrdine(o.getDataOrdine());
-			dto.setAziendaNome(o.getAzienda() != null ? o.getAzienda().getNome() : null);
+    private StatisticsDto buildStatisticsDto(LocalDateTime start, LocalDateTime end, Accumulator acc, KPI kpi, int totaleOrdini) {
+        return StatisticsDto.builder()
+                .dataInizio(start.toLocalDate())
+                .dataFine(end.toLocalDate())
+                .totaleOrdini(totaleOrdini)
+                .totaleArticoliVenduti(acc.totaleArticoli.longValue())
+                .totaleOre(acc.totaleOre)
+                .totaleMinuti(acc.totaleMinuti)
+                .totaleRicavoNetto(acc.totaleRicavoNetto)
+                .totaleRicavoLordo(acc.totaleRicavoLordo)
+                .totaleIva(acc.totaleIva)
+                .totaleCosti(acc.totaleCosti)
+                .costoPersonale(acc.costoPersonale)
+                .costoFisso(acc.costoFisso)
+                .utileNetto(kpi.utileNetto)
+                .produttivitaOraria(kpi.produttivitaOraria)
+                .marginePercentuale(kpi.marginePercentuale)
+                .valoreMedioOrdine(kpi.valoreMedioOrdine)
+                .valoreMedioArticolo(kpi.valoreMedioArticolo)
+                .mediaArticoliOra(kpi.mediaArticoliOra)
+                .utileMedioArticolo(kpi.utileMedioArticolo)
+                .utileMedioOrdine(kpi.utileMedioOrdine)
+                .iva10Percent(kpi.iva10)
+                .iva22Percent(kpi.iva22)
+                .totaleMolatura(acc.molatura)
+                .totaleLucidatura(acc.lucidatura)
+                .totaleSaldatura(acc.saldatura)
+                .totaleForatura(acc.foratura)
+                .totaleFilettatura(acc.filettatura)
+                .totaleMontaggio(acc.montaggio)
+                .totaleScatolatura(acc.scatolatura)
+                .build();
+    }
 
-			Articolo a = r.getArticolo();
-			dto.setArticoloId(a.getId());
-			String codice = a.getCodice();
-			if (a.getCodiceComponente() != null && !a.getCodiceComponente().isEmpty()) {
-				codice += "/" + a.getCodiceComponente();
-			}
-			dto.setArticoloCodice(codice);
+    private BigDecimal safeDivide(BigDecimal numerator, BigDecimal denominator) {
+        if (denominator == null || denominator.compareTo(BigDecimal.ZERO) == 0)
+            return BigDecimal.ZERO;
+        return numerator.divide(denominator, 2, RoundingMode.HALF_UP);
+    }
 
-			return dto;
-		}).toList();
+    @Transactional
+    public Map<Long, List<OrdineRisultatoDto>> getOrdiniDettaglio(LocalDateTime start, LocalDateTime end, Long aziendaId) {
+        start = start.with(LocalTime.MIN);
+        LocalDateTime todayEnd = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime().with(LocalTime.MAX);
 
-		// raggruppa per ordineId
-		Map<Long, List<OrdineRisultatoDto>> risultatiPerOrdine = dtos.stream().collect(
-				Collectors.groupingBy(OrdineRisultatoDto::getOrdineId, LinkedHashMap::new, Collectors.toList()));
+        if (end.isAfter(todayEnd)) {
+            end = todayEnd;
+        } else {
+            end = end.with(LocalTime.MAX);
+        }
 
-		return risultatiPerOrdine;
-	}
+        if (start.isAfter(end)) {
+            start = end.minusDays(1).with(LocalTime.MIN);
+        }
 
+        List<OrdineRisultato> risultati = ordineRisultatoRepository.findOrdiniByDataRangeAndAzienda(start, end, aziendaId);
+
+        List<OrdineRisultatoDto> dtos = risultati.stream().map(r -> {
+            OrdineRisultatoDto dto = new OrdineRisultatoDto();
+            Ordine o = r.getOrdine();
+            OrdineArticolo ordineArticoloSpecifico = o.getArticoli().stream()
+                    .filter(oa -> oa.getArticolo().getId().equals(r.getArticolo().getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Articolo non trovato nell’ordine"));
+
+            dto.setId(r.getId());
+            dto.setMolaturaReale(r.getMolaturaReale());
+            dto.setMolaturaFatturabile(r.getMolaturaFatturabile());
+            dto.setLucidaturaReale(r.getLucidaturaReale());
+            dto.setLucidaturaFatturabile(r.getLucidaturaFatturabile());
+            dto.setSaldaturaReale(r.getSaldaturaReale());
+            dto.setSaldaturaFatturabile(r.getSaldaturaFatturabile());
+            dto.setForaturaReale(r.getForaturaReale());
+            dto.setForaturaFatturabile(r.getForaturaFatturabile());
+            dto.setFilettaturaReale(r.getFilettaturaReale());
+            dto.setFilettaturaFatturabile(r.getFilettaturaFatturabile());
+            dto.setMontaggioReale(r.getMontaggioReale());
+            dto.setMontaggioFatturabile(r.getMontaggioFatturabile());
+            dto.setScatolaturaReale(r.getScatolaturaReale());
+            dto.setScatolaturaFatturabile(r.getScatolaturaFatturabile());
+            dto.setDataRisultato(r.getDataRisultato());
+            dto.setPrezzo(ordineArticoloSpecifico.getPrezzo());
+            dto.setQuantita(r.getQuantita());
+
+            dto.setOrdineId(o.getId());
+            dto.setWorkStatus(o.getWorkStatus());
+            dto.setDataOrdine(o.getDataOrdine());
+            dto.setAziendaNome(o.getAzienda() != null ? o.getAzienda().getNome() : null);
+
+            Articolo a = r.getArticolo();
+            dto.setArticoloId(a.getId());
+            String codice = a.getCodice();
+            if (a.getCodiceComponente() != null && !a.getCodiceComponente().isEmpty()) {
+                codice += "/" + a.getCodiceComponente();
+            }
+            dto.setArticoloCodice(codice);
+
+            return dto;
+        }).toList();
+
+        return dtos.stream().collect(Collectors.groupingBy(OrdineRisultatoDto::getOrdineId, LinkedHashMap::new, Collectors.toList()));
+    }
 }

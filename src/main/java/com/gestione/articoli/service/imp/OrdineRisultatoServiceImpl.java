@@ -20,13 +20,12 @@ import com.gestione.articoli.service.OrdineService;
 import com.gestione.articoli.service.WorkService;
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -245,13 +244,16 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 
 				// costo unitario = (minutiInOre * prezzoOrarioFisso) / quantita
 				BigDecimal prezzoUnitario = minutiInOre
-				    .multiply(prezzoOrarioFisso)
-				    .divide(quantita, 2, RoundingMode.HALF_UP);
+					    .multiply(prezzoOrarioFisso)
+					    .divide(quantita, 4, RoundingMode.HALF_UP); // calcolo originale
 
-				System.out.println(">>> Costo unitario calcolato: " + prezzoUnitario);
+					// arrotondamento a 2 decimali
+					BigDecimal prezzoArrotondato = prezzoUnitario.setScale(2, RoundingMode.CEILING);
+
+				System.out.println(">>> Prezzo unitario calcolato: " + prezzoUnitario);
 
 				// Se vuoi salvarlo in un campo, puoi farlo così:
-				articoloOrdine.setPrezzo(prezzoUnitario);
+				articoloOrdine.setPrezzo(prezzoArrotondato);
 
 			ordineArticoloRepository.save(articoloOrdine);
 		}
