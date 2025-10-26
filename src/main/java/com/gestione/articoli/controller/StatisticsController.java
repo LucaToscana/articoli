@@ -1,6 +1,7 @@
 package com.gestione.articoli.controller;
 
 
+import com.gestione.articoli.dto.OrdineConRisultatiDto;
 import com.gestione.articoli.dto.OrdineRisultatoDto;
 import com.gestione.articoli.dto.StatisticsDto;
 import com.gestione.articoli.model.OrdineRisultato;
@@ -31,7 +32,7 @@ public class StatisticsController {
         return statisticsService.calculateStatistics(start, end, aziendaId);
     }
     @GetMapping("/orders")
-    public Map<Long, List<OrdineRisultatoDto>> getOrdini(
+    public Map<Long, OrdineConRisultatiDto> getOrdini(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
             @RequestParam(required = false) Long aziendaId

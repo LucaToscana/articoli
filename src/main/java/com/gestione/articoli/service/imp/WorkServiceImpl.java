@@ -176,7 +176,7 @@ public class WorkServiceImpl implements WorkService {
 		}
 		if (!WorkActivityType.DISPONIBILITA_LOTTO.name().equals(dto.getLavorazione()) &&
 			    !WorkActivityType.DISPONIBILITA_LAVORAZIONE.name().equals(dto.getLavorazione()) &&
-			    isAdmin) {
+			    isAdmin && dto.getPostazioneId()!=1L) {
 			    operatorWork.setStatus(WorkStatus.PAUSED);
 			}
 		// Utente standard (postazione 2)

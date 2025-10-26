@@ -31,9 +31,10 @@ public interface OrdineRisultatoRepository extends JpaRepository<OrdineRisultato
         @Param("end") LocalDateTime end,
         @Param("aziendaId") Long aziendaId
     );
+    // Recupera tutti i risultati per una specifica azienda
+    @Query("SELECT r FROM OrdineRisultato r WHERE r.ordine.azienda.id = :aziendaId ORDER BY r.dataRisultato ASC")
+    List<OrdineRisultato> findByAziendaId(@Param("aziendaId") Long aziendaId);
 
-
-    
 }
 
 

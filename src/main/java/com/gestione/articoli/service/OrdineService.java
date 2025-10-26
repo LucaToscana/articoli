@@ -13,6 +13,7 @@ public interface OrdineService {
     OrdineDto createOrdine(OrdineDto dto);
 
     List<OrdineDto> getAllOrdini();
+    
 
     OrdineDto getOrdineById(Long id);
     
@@ -27,4 +28,6 @@ public interface OrdineService {
 	List<OrdineArticoloPrezzoDto> getPrezziByOrdine(Long ordineId);
 
 	void aggiornaPrezziCreaDatiFattura(List<OrdineArticoloPrezzoDto> prezziDtoList);
+
+	List<OrdineDto> findAllOrderByIds(List<Long> ids);
 }

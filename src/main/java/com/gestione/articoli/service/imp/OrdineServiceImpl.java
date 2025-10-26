@@ -75,6 +75,19 @@ public class OrdineServiceImpl implements OrdineService {
 		return ordineMapper.toDto(saved);
 	}
 
+	
+
+	@Override
+	public List<OrdineDto> findAllOrderByIds(List<Long> ids) {
+	    // Recupera tutti gli ordini corrispondenti agli ID passati
+	    List<Ordine> ordini = ordineRepository.findAllById(ids);
+
+	    // Mappa ogni ordine in OrdineDto
+	    return ordini.stream()
+	                 .map(ordineMapper::toDto)
+	                 .collect(Collectors.toList());
+	}
+
 	public List<OrdineDto> getAllOrdini() {
 		return ordineRepository.findAllWithAziendaAndArticoli().stream().map(ordineMapper::toDto)
 				.collect(Collectors.toList());
@@ -389,5 +402,6 @@ public class OrdineServiceImpl implements OrdineService {
 		// 🔹 Salva ordine aggiornato
 		ordineRepository.save(ordine);
 	}
+
 
 }
