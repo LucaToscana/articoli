@@ -50,6 +50,7 @@ public interface WorkService {
     void deleteWork(Long id);
 	void deleteLottoWork(Long id);
 	void cleanCompletedOrderWorks(Long orderId);
+	List<WorkDto> getInProgressManualWorksCreatedByAdmin();
 
 }
 

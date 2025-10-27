@@ -210,7 +210,23 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
     List<WorkSummaryProjection> findActiveManualWorksWithTotalMinutesByOrderExcludingActivities(
             @Param("excludedActivities") List<String> excludedActivities,
             @Param("orderId") Long orderId);
-
+    /* ========= MANUAL WORKS CREATED BY ADMIN (NATIVE QUERY) ========= */
+    @Query(value = "SELECT * FROM (" +
+                   "SELECT w.*, ROW_NUMBER() OVER (" +
+                   "PARTITION BY w.order_article_id, w.articolo_id, w.activity, w.specifiche, " +
+                   "w.grana, w.pasta_colore, w.operator_id, w.operator2_id, w.operator3_id, w.original_start_time " +
+                   "ORDER BY w.start_time DESC) AS rn " +
+                   "FROM works w " +
+                   "JOIN ordine_articoli oa ON w.order_article_id = oa.id " +
+                   "JOIN ordini o ON oa.ordine_id = o.id " +
+                   "WHERE w.activity NOT IN (:excludedActivities) " +
+                   "AND o.work_status = 'IN_PROGRESS' " +
+                   "AND w.manager_id = :creatorId) sub " +
+                   "WHERE rn = 1", 
+           nativeQuery = true)
+    List<Work> findInProgressManualWorksByCreatorIdExcludedActivities(
+            @Param("creatorId") Long creatorId,
+            @Param("excludedActivities") List<String> excludedActivities);
     /* ========= WORKS BY ORDER ========= */
     @Query("SELECT w FROM Work w " +
            "JOIN w.orderArticle oa " +

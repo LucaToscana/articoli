@@ -38,4 +38,10 @@ public class WorkDto {
 
     // nuovo campo per i minuti totali del gruppo
     private BigDecimal totalMinutes;
+	private String infoOrdine;
+	private String infoArticolo;
+	private String infoArticoloPadre;
+	private String nomeAzienda;
+
+
 }

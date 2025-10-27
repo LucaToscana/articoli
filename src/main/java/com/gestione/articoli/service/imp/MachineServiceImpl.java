@@ -156,6 +156,13 @@ public class MachineServiceImpl implements MachineService {
 		if (isSpecialUsername(machine.getUsername())) {
 			throw new RuntimeException("Non puoi eliminare questa macchina!");
 		}
+		// Controlla se è assegnato a un Work come operator1/2/3 o manager
+		boolean isAssigned = workRepository.existsByOperatorOrOperator2OrOperator3OrManager(machine, machine,
+				machine, machine);
+
+		if (isAssigned) {
+			throw new RuntimeException("Impossibile eliminare la postazione: é presente nei dati storici");
+		}
 
 		userRepository.deleteById(id);
 	}

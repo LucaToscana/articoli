@@ -88,13 +88,11 @@ public class WorkServiceImpl implements WorkService {
 	@Transactional
 	@Override
 	public WorkDto startWork(StartWorkDto dto) {
-	    // Controlla se l'utente ha il ruolo USER (macchina)
-	    boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-	            .stream()
-	            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
-	    boolean isUser = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-	            .stream()
-	            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
+		// Controlla se l'utente ha il ruolo USER (macchina)
+		boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+				.anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+		boolean isUser = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+				.anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
 		Work operatorWork = new Work();
 		User manager = userService.getAuthenticatedUser();
 		operatorWork.setManager(manager);
@@ -152,14 +150,14 @@ public class WorkServiceImpl implements WorkService {
 			LocalDateTime end = dto.getEndTime();
 
 // Ottieni millisecondi correnti
-			 // Ottieni il tempo corrente in Italia
-	        ZonedDateTime nowItaly = ZonedDateTime.now(ZoneId.of("Europe/Rome"));
+			// Ottieni il tempo corrente in Italia
+			ZonedDateTime nowItaly = ZonedDateTime.now(ZoneId.of("Europe/Rome"));
 
-	        // Ottieni i millisecondi dall'inizio del secondo
-	        int currentMillis = nowItaly.getNano() / 1_000_000;
+			// Ottieni i millisecondi dall'inizio del secondo
+			int currentMillis = nowItaly.getNano() / 1_000_000;
 
-	        // Converti millisecondi in nanosecondi
-	        int currentNano = currentMillis * 1_000_000;
+			// Converti millisecondi in nanosecondi
+			int currentNano = currentMillis * 1_000_000;
 
 // Aggiorna startTime e endTime con i millisecondi correnti
 			dto.setStartTime(start.withNano(currentNano));
@@ -174,16 +172,18 @@ public class WorkServiceImpl implements WorkService {
 			operatorWork.setOriginalStartTime(originalStartTime);
 			operatorWork.setStartTime(originalStartTime);
 		}
-		if (!WorkActivityType.DISPONIBILITA_LOTTO.name().equals(dto.getLavorazione()) &&
-			    !WorkActivityType.DISPONIBILITA_LAVORAZIONE.name().equals(dto.getLavorazione()) &&
-			    isAdmin && dto.getPostazioneId()!=1L) {
-			    operatorWork.setStatus(WorkStatus.PAUSED);
-			}
+		if (!WorkActivityType.DISPONIBILITA_LOTTO.name().equals(dto.getLavorazione())
+				&& !WorkActivityType.DISPONIBILITA_LAVORAZIONE.name().equals(dto.getLavorazione()) && isAdmin
+				&& null!= dto.getPostazioneId() && dto.getPostazioneId() != 1L) {
+			operatorWork.setStatus(WorkStatus.PAUSED);
+			userRepository.findByUsername("admin").ifPresent(user -> {
+				operatorWork.setManager(user);
+			});		}
 		// Utente standard (postazione 2)
 		if (isUser && dto.getPostazioneId() != null && dto.getPostazioneId() == 2) {
-		    userRepository.findByUsername("user").ifPresent(user -> {
-		        operatorWork.setManager(user);
-		    });
+			userRepository.findByUsername("user").ifPresent(user -> {
+				operatorWork.setManager(user);
+			});
 		}
 
 		workRepository.save(operatorWork);
@@ -201,7 +201,7 @@ public class WorkServiceImpl implements WorkService {
 	@Override
 	public WorkDto closeWork(Long workId, WorkStatus newStatus) {
 		LocalDateTime endTime = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
-		
+
 		Work work = workRepository.findById(workId)
 				.orElseThrow(() -> new RuntimeException("Lavoro non trovato con ID: " + workId));
 		work.setStatus(newStatus);
@@ -254,56 +254,55 @@ public class WorkServiceImpl implements WorkService {
 	@Override
 	@Transactional
 	public void deleteWork(Long id) {
-	    // Recupera la work principale
-	    Work work = workRepository.findById(id)
-	            .orElseThrow(() -> new RuntimeException("Work non trovata con id " + id));
+		// Recupera la work principale
+		Work work = workRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Work non trovata con id " + id));
 
-	    OrdineArticolo ordineArticolo = work.getOrderArticle();
-	    LocalDateTime originalStartTime = work.getOriginalStartTime();
-	    WorkActivityType activityType = work.getActivity();
+		OrdineArticolo ordineArticolo = work.getOrderArticle();
+		LocalDateTime originalStartTime = work.getOriginalStartTime();
+		WorkActivityType activityType = work.getActivity();
 
-	    if (ordineArticolo == null || originalStartTime == null || activityType == null) {
-	        throw new RuntimeException("Work senza ordine, originalStartTime o activityType non impostato");
-	    }
+		if (ordineArticolo == null || originalStartTime == null || activityType == null) {
+			throw new RuntimeException("Work senza ordine, originalStartTime o activityType non impostato");
+		}
 
-	    // Recupera tutte le lavorazioni con stesso ordine, stesso originalStartTime e stessa activity
-	    List<Work> lavoriDaEliminare = workRepository
-	            .findByOrderArticleAndOriginalStartTimeAndActivity(ordineArticolo, originalStartTime, activityType);
+		// Recupera tutte le lavorazioni con stesso ordine, stesso originalStartTime e
+		// stessa activity
+		List<Work> lavoriDaEliminare = workRepository.findByOrderArticleAndOriginalStartTimeAndActivity(ordineArticolo,
+				originalStartTime, activityType);
 
-	    if (lavoriDaEliminare.isEmpty()) {
-	        throw new RuntimeException("Nessuna lavorazione trovata con ordine, originalStartTime e activity corrispondenti");
-	    }
+		if (lavoriDaEliminare.isEmpty()) {
+			throw new RuntimeException(
+					"Nessuna lavorazione trovata con ordine, originalStartTime e activity corrispondenti");
+		}
 
-	    // Elimina tutte
-	    workRepository.deleteAll(lavoriDaEliminare);
+		// Elimina tutte
+		workRepository.deleteAll(lavoriDaEliminare);
 
 	}
 
 	@Override
 	public List<WorkDto> getStepsByWork(Long id) {
-	    // Recupera la work principale
-	    Work work = workRepository.findById(id)
-	            .orElseThrow(() -> new RuntimeException("Work non trovata con id " + id));
+		// Recupera la work principale
+		Work work = workRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Work non trovata con id " + id));
 
-	    OrdineArticolo ordineArticolo = work.getOrderArticle();
-	    LocalDateTime originalStartTime = work.getOriginalStartTime();
-	    WorkActivityType activityType = work.getActivity();
+		OrdineArticolo ordineArticolo = work.getOrderArticle();
+		LocalDateTime originalStartTime = work.getOriginalStartTime();
+		WorkActivityType activityType = work.getActivity();
 
-	    if (ordineArticolo == null || originalStartTime == null || activityType == null) {
-	        throw new RuntimeException("Work senza ordine, originalStartTime o activityType non impostato");
-	    }
+		if (ordineArticolo == null || originalStartTime == null || activityType == null) {
+			throw new RuntimeException("Work senza ordine, originalStartTime o activityType non impostato");
+		}
 
-	    // Recupera tutte le lavorazioni con stesso ordine, stesso originalStartTime e stessa activity
-	    List<Work> lavoriDaVisualizzare = workRepository
-	            .findByOrderArticleAndOriginalStartTimeAndActivity(ordineArticolo, originalStartTime, activityType);
+		// Recupera tutte le lavorazioni con stesso ordine, stesso originalStartTime e
+		// stessa activity
+		List<Work> lavoriDaVisualizzare = workRepository
+				.findByOrderArticleAndOriginalStartTimeAndActivity(ordineArticolo, originalStartTime, activityType);
 
-
-	    List<WorkDto> lavoriDto = lavoriDaVisualizzare.stream()
-	            .map(WorkMapper::toDto)
-	            .toList();
-        return lavoriDto ;
+		List<WorkDto> lavoriDto = lavoriDaVisualizzare.stream().map(WorkMapper::toDto).toList();
+		return lavoriDto;
 	}
-
 
 	@Transactional
 	public void cleanCompletedOrderWorks(Long orderId) {
@@ -396,10 +395,16 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public List<WorkDto> getInProgressAvailabilityWorks() {
-		return workRepository.findAvailabilityWorksInProgressWithOrderInProgress().stream().map(WorkMapper::toDto)
-				.collect(Collectors.toList());
-	}
+	    List<Work> works = workRepository.findAvailabilityWorksInProgressWithOrderInProgress();
 
+	    List<WorkDto> workDtos = works.stream()
+	            .map(WorkMapper::toDto)
+	            .collect(Collectors.toList());
+
+	    populateWorkInfo(workDtos);
+
+	    return workDtos;
+	}
 	/**
 	 * Recupera i lavori in corso di disponibilità lotto.
 	 *
@@ -407,7 +412,15 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public List<WorkDto> getInProgressLottoWorks() {
-		return workRepository.findInProgressLottoWorks().stream().map(WorkMapper::toDto).collect(Collectors.toList());
+	    List<Work> works = workRepository.findInProgressLottoWorks();
+
+	    List<WorkDto> workDtos = works.stream()
+	            .map(WorkMapper::toDto)
+	            .collect(Collectors.toList());
+
+	    populateWorkInfo(workDtos);
+
+	    return workDtos;
 	}
 
 	/**
@@ -417,8 +430,15 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public List<WorkDto> getInProgressLottoWorksWithOrderInProgress() {
-		return workRepository.findInProgressLottoWorksWithOrderInProgress().stream().map(WorkMapper::toDto)
-				.collect(Collectors.toList());
+	    List<Work> works = workRepository.findInProgressLottoWorksWithOrderInProgress();
+
+	    List<WorkDto> workDtos = works.stream()
+	            .map(WorkMapper::toDto)
+	            .collect(Collectors.toList());
+
+	    populateWorkInfo(workDtos);
+
+	    return workDtos;
 	}
 
 	/**
@@ -438,6 +458,41 @@ public class WorkServiceImpl implements WorkService {
 	 */
 	@Override
 	public List<WorkDto> getInProgressManualWorks() {
+		// Recupera username dell'utente/macchina dal contesto di sicurezza
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		if (username == null || username.isBlank()) {
+			throw new RuntimeException("Utente non autenticato");
+		}
+
+		// Controlla se l'utente ha il ruolo USER (macchina)
+		boolean isUser = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+				.anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
+
+		// Recupera tutti i lavori manuali in corso, escludendo certe attività
+		List<WorkDto> allManualWorks = workRepository
+				.findInProgressManualWorksExcludedActivities(List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
+						WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()))
+				.stream().map(WorkMapper::toDto).collect(Collectors.toList());
+
+		// Se è un utente macchina, filtriamo i lavori in base alle attività della
+		// macchina
+		if (isUser) {
+			User machineUser = userRepository.findByUsernameAndMachineUserTrue(username)
+					.orElseThrow(() -> new RuntimeException("Macchina non trovata"));
+
+			Set<String> machineActivities = machineUser.getLavorazioni().stream()
+					.map(lav -> lav.getNome().toUpperCase()).collect(Collectors.toSet());
+
+			allManualWorks = allManualWorks.stream().filter(work -> machineActivities.contains(work.getActivity()))
+					.collect(Collectors.toList());
+		}
+
+		// Imposta infoOrdine e infoArticolo su ogni WorkDto senza ulteriori query
+		populateWorkInfo(allManualWorks);
+		return allManualWorks;
+	}
+	@Override
+	public List<WorkDto> getInProgressManualWorksCreatedByAdmin() {
 	    // Recupera username dell'utente/macchina dal contesto di sicurezza
 	    String username = SecurityContextHolder.getContext().getAuthentication().getName();
 	    if (username == null || username.isBlank()) {
@@ -445,39 +500,44 @@ public class WorkServiceImpl implements WorkService {
 	    }
 
 	    // Controlla se l'utente ha il ruolo USER (macchina)
-	    boolean isUser = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-	            .stream()
+	    boolean isUser = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
 	            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
 
-	    // Recupera tutti i lavori manuali in corso, escludendo certe attività
+	    // Recupera tutti i lavori manuali in corso creati dall’admin (ID = 1), escludendo certe attività
 	    List<WorkDto> allManualWorks = workRepository
-	            .findInProgressManualWorksExcludedActivities(
+	            .findInProgressManualWorksByCreatorIdExcludedActivities(
+	                    1L, // creator_id dell’admin
 	                    List.of(
-	                        WorkActivityType.DISPONIBILITA_LOTTO.name(),
-	                        WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
-	                    ))
+	                            WorkActivityType.DISPONIBILITA_LOTTO.name(),
+	                            WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
+	                    )
+	            )
 	            .stream()
 	            .map(WorkMapper::toDto)
 	            .collect(Collectors.toList());
-
-	    // Se è un utente macchina, filtriamo i lavori in base alle attività della macchina
+	    List<WorkDto> filteredManualWorks = allManualWorks.stream()
+	    	    .filter(w -> w.getStartTime().equals(w.getOriginalStartTime()))
+				.filter(w -> w.getStatus().equals( WorkStatus.PAUSED.name()))
+	    	    .filter(w -> w.getManager() != null && w.getManager().getId() == 1L)
+	    	    .collect(Collectors.toList());	    // Se è un utente macchina, filtriamo i lavori in base alle attività della macchina
 	    if (isUser) {
 	        User machineUser = userRepository.findByUsernameAndMachineUserTrue(username)
 	                .orElseThrow(() -> new RuntimeException("Macchina non trovata"));
 
-	        Set<String> machineActivities = machineUser.getLavorazioni()
-	                .stream()
+	        Set<String> machineActivities = machineUser.getLavorazioni().stream()
 	                .map(lav -> lav.getNome().toUpperCase())
 	                .collect(Collectors.toSet());
 
-	        allManualWorks = allManualWorks.stream()
+	        filteredManualWorks = filteredManualWorks.stream()
 	                .filter(work -> machineActivities.contains(work.getActivity()))
 	                .collect(Collectors.toList());
 	    }
 
-	    return allManualWorks;
-	}
+	    // Imposta infoOrdine e infoArticolo su ogni WorkDto senza ulteriori query
+	    populateWorkInfo(filteredManualWorks);
 
+	    return filteredManualWorks;
+	}
 
 	@Override
 	public List<WorkDto> getManualWorksWithTotalMinutesByOrderInProgress(Long orderId) {
@@ -493,71 +553,59 @@ public class WorkServiceImpl implements WorkService {
 
 	@Override
 	public List<WorkDto> getManualWorksWithTotalMinutesByOrder(Long orderId) {
-	    // 1️⃣ Recupera i summary principali con minuti totali
-	    List<WorkSummaryProjection> summaries = workRepository
-	            .findActiveManualWorksWithTotalMinutesByOrderExcludingActivities(
-	                    List.of(
-	                        WorkActivityType.DISPONIBILITA_LOTTO.name(),
-	                        WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()
-	                    ),
-	                    orderId
-	            );
+		// 1️⃣ Recupera i summary principali con minuti totali
+		List<WorkSummaryProjection> summaries = workRepository
+				.findActiveManualWorksWithTotalMinutesByOrderExcludingActivities(
+						List.of(WorkActivityType.DISPONIBILITA_LOTTO.name(),
+								WorkActivityType.DISPONIBILITA_LAVORAZIONE.name()),
+						orderId);
 
-	    // 2️⃣ Estrai tutti gli ID dei lavori
-	    List<Long> workIds = summaries.stream()
-	                                  .map(WorkSummaryProjection::getId)
-	                                  .toList();
+		// 2️⃣ Estrai tutti gli ID dei lavori
+		List<Long> workIds = summaries.stream().map(WorkSummaryProjection::getId).toList();
 
-	    // 3️⃣ Recupera tutte le posizioni in un’unica query
-	    List<WorkIdPosizioneProjection> positions = workRepository.findPosizioniByWorkIds(workIds);
+		// 3️⃣ Recupera tutte le posizioni in un’unica query
+		List<WorkIdPosizioneProjection> positions = workRepository.findPosizioniByWorkIds(workIds);
 
-	    // 4️⃣ Raggruppa per workId
-	    Map<Long, List<String>> posizioniMap = positions.stream()
-	            .collect(Collectors.groupingBy(
-	                WorkIdPosizioneProjection::getWorkId,
-	                Collectors.mapping(WorkIdPosizioneProjection::getPosizione, Collectors.toList())
-	            ));
-	    List<WorkDto> summariesWithPositions = summaries.stream()
-        .map(summary -> {
-            WorkDto dto = WorkMapper.workSummaryProjectionToDto(summary);
-            dto.setPosizioni(posizioniMap.getOrDefault(summary.getId(), List.of()));
-            return dto;
-        })
-        .toList();
-	    
-	 // 1️⃣ Estrai tutti gli orderArticleId e articoloId
-	    Set<Long> orderArticleIds = summariesWithPositions.stream()
-	            .map(WorkDto::getOrderArticleId)
-	            .collect(Collectors.toSet());
+		// 4️⃣ Raggruppa per workId
+		Map<Long, List<String>> posizioniMap = positions.stream()
+				.collect(Collectors.groupingBy(WorkIdPosizioneProjection::getWorkId,
+						Collectors.mapping(WorkIdPosizioneProjection::getPosizione, Collectors.toList())));
+		List<WorkDto> summariesWithPositions = summaries.stream().map(summary -> {
+			WorkDto dto = WorkMapper.workSummaryProjectionToDto(summary);
+			dto.setPosizioni(posizioniMap.getOrDefault(summary.getId(), List.of()));
+			return dto;
+		}).toList();
 
-	    Set<Long> articoloIds = summariesWithPositions.stream()
-	            .map(dto -> dto.getArticolo().getId())
-	            .collect(Collectors.toSet());
+		// 1️⃣ Estrai tutti gli orderArticleId e articoloId
+		Set<Long> orderArticleIds = summariesWithPositions.stream().map(WorkDto::getOrderArticleId)
+				.collect(Collectors.toSet());
 
-	    // 2️⃣ Recupera tutti gli OrdineArticolo in un'unica query
-	    Map<Long, OrdineArticolo> orderArticleMap = ordineArticoloRepository.findAllById(orderArticleIds)
-	            .stream()
-	            .collect(Collectors.toMap(OrdineArticolo::getId, oa -> oa));
+		Set<Long> articoloIds = summariesWithPositions.stream().map(dto -> dto.getArticolo().getId())
+				.collect(Collectors.toSet());
 
-	    // 3️⃣ Recupera tutti gli Articolo in un'unica query
-	    Map<Long, Articolo> articoloMap = articoloRepository.findAllById(articoloIds)
-	            .stream()
-	            .collect(Collectors.toMap(Articolo::getId, a -> a));
+		// 2️⃣ Recupera tutti gli OrdineArticolo in un'unica query
+		Map<Long, OrdineArticolo> orderArticleMap = ordineArticoloRepository.findAllById(orderArticleIds).stream()
+				.collect(Collectors.toMap(OrdineArticolo::getId, oa -> oa));
 
-	    // 4️⃣ Mappa i dati nei DTO
-	    for (WorkDto dto : summariesWithPositions) {
-	        OrdineArticolo oa = orderArticleMap.get(dto.getOrderArticleId());
-	        if (oa == null) throw new RuntimeException("OrdineArticolo non trovato con id " + dto.getOrderArticleId());
-	        dto.setOrdineArticolo(OrdineArticoloMapper.toDto(oa));
+		// 3️⃣ Recupera tutti gli Articolo in un'unica query
+		Map<Long, Articolo> articoloMap = articoloRepository.findAllById(articoloIds).stream()
+				.collect(Collectors.toMap(Articolo::getId, a -> a));
 
-	        Articolo articolo = articoloMap.get(dto.getArticolo().getId());
-	        if (articolo == null) throw new RuntimeException("Articolo non trovato con id " + dto.getArticolo().getId());
-	        dto.setArticolo(ArticoloMapper.toDto(articolo));
-	    }
-	    // 5️⃣ Mappa i summary nei DTO e assegna le posizioni
-	    return summariesWithPositions;
+		// 4️⃣ Mappa i dati nei DTO
+		for (WorkDto dto : summariesWithPositions) {
+			OrdineArticolo oa = orderArticleMap.get(dto.getOrderArticleId());
+			if (oa == null)
+				throw new RuntimeException("OrdineArticolo non trovato con id " + dto.getOrderArticleId());
+			dto.setOrdineArticolo(OrdineArticoloMapper.toDto(oa));
+
+			Articolo articolo = articoloMap.get(dto.getArticolo().getId());
+			if (articolo == null)
+				throw new RuntimeException("Articolo non trovato con id " + dto.getArticolo().getId());
+			dto.setArticolo(ArticoloMapper.toDto(articolo));
+		}
+		// 5️⃣ Mappa i summary nei DTO e assegna le posizioni
+		return summariesWithPositions;
 	}
-
 
 	@Override
 	public List<WorkDto> getInProgressManualByOrder(Long id) {
@@ -591,8 +639,7 @@ public class WorkServiceImpl implements WorkService {
 		Work current = workRepository.findById(workId)
 				.orElseThrow(() -> new RuntimeException("Work non trovato: " + workId));
 		LocalDateTime end = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
-		current.setEndTime(end);
-		workRepository.save(current);
+
 
 		Work cloned = new Work();
 		cloned.setOrderArticle(current.getOrderArticle());
@@ -614,6 +661,32 @@ public class WorkServiceImpl implements WorkService {
 		cloned.setOriginalStartTime(current.getOriginalStartTime());
 		LocalDateTime start = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
 		cloned.setStartTime(start);
+        
+		
+		
+		if (current != null 
+			    && current.getStartTime() != null
+			    && current.getOriginalStartTime() != null
+			    && current.getStatus() != null
+			    && current.getManager() != null
+			    && current.getManager().getUsername() != null) {
+
+			    boolean isStartTimeEqual = current.getStartTime().equals(current.getOriginalStartTime());
+			    boolean isPaused = current.getStatus() == WorkStatus.PAUSED;
+			    boolean isAdmin = "admin".equals(current.getManager().getUsername());
+
+			    if (isStartTimeEqual && isPaused && isAdmin) {
+			        // Cancella il lavoro
+			        workRepository.delete(current);
+			    } else {
+			        // Aggiorna endTime e salva
+			        current.setEndTime(end);
+			        workRepository.save(current);
+			    }
+			} else {
+		        current.setEndTime(end);
+		        workRepository.save(current);
+			}
 
 		return WorkMapper.toDto(workRepository.save(cloned));
 	}
@@ -780,6 +853,60 @@ public class WorkServiceImpl implements WorkService {
 					.orElseThrow(() -> new RuntimeException(errorMsg + " non trovato"));
 			setter.accept(user);
 		}
+	}
+	public void populateWorkInfo(List<WorkDto> works) {
+	    if (works == null || works.isEmpty()) {
+	        return;
+	    }
+		// Raccogli tutti gli orderArticleId presenti nei workDto
+		Set<Long> orderArticleIds = works.stream().map(WorkDto::getOrderArticleId).collect(Collectors.toSet());
+
+		List<OrdineArticolo> ordineArticoli = ordineArticoloRepository.findAllById(orderArticleIds);
+		Map<Long, OrdineArticolo> ordineArticoloMap = ordineArticoli.stream()
+				.collect(Collectors.toMap(OrdineArticolo::getId, oa -> oa));
+	    for (WorkDto work : works) {
+	        if (work == null || work.getOrderArticleId() == null) continue;
+
+	        OrdineArticolo oa = ordineArticoloMap.get(work.getOrderArticleId());
+	        if (oa == null) continue;
+
+	        // Info ordine
+	        if (oa.getOrdine() != null) {
+	            work.setInfoOrdine(
+	                oa.getOrdine().getNomeDocumento() != null ? oa.getOrdine().getNomeDocumento() : "-"
+	            );
+
+	            if (oa.getOrdine().getAzienda() != null) {
+	                work.setNomeAzienda(
+	                    oa.getOrdine().getAzienda().getNome() != null ? oa.getOrdine().getAzienda().getNome() : "-"
+	                );
+	            } else {
+	                work.setNomeAzienda("-");
+	            }
+	        } else {
+	            work.setInfoOrdine("-");
+	            work.setNomeAzienda("-");
+	        }
+
+	        // Info articolo
+	        if (work.getArticolo() != null) {
+	            work.setInfoArticolo(
+	                work.getArticolo().getDescrizione() != null ? work.getArticolo().getDescrizione() : "-"
+	            );
+
+	            Long workArticoloId = work.getArticolo().getId();
+	            if (oa.getArticolo() != null) {
+	                Long parentArticoloId = oa.getArticolo().getId();
+	                if (workArticoloId != null && parentArticoloId != null && !workArticoloId.equals(parentArticoloId)) {
+	                    work.setInfoArticoloPadre(
+	                        oa.getArticolo().getDescrizione() != null ? oa.getArticolo().getDescrizione() : "-"
+	                    );
+	                }
+	            }
+	        } else {
+	            work.setInfoArticolo("-");
+	        }
+	    }
 	}
 
 	private BigDecimal toBigDecimal(Object obj) {

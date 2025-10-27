@@ -150,7 +150,13 @@ public class WorkController {
     public List<WorkDto> getInProgressManualWorks() {
         return workService.getInProgressManualWorks();
     }
-    
+    /**
+     * Recupera i Work manuali in corso creati dall'admin (creator_id = 1).
+     */
+    @GetMapping("/manual/in-progress/admin")
+    public List<WorkDto> getInProgressManualWorksCreatedByAdmin() {
+        return workService.getInProgressManualWorksCreatedByAdmin();
+    }
     /**
      * Recupera i Work manuali in corso di un ordine.
      */

@@ -11,6 +11,7 @@ import com.gestione.articoli.dto.AdminDto;
 import com.gestione.articoli.model.Role;
 import com.gestione.articoli.model.User;
 import com.gestione.articoli.repository.UserRepository;
+import com.gestione.articoli.repository.WorkRepository;
 import com.gestione.articoli.service.AdminService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class AdminServiceImpl implements AdminService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final WorkRepository workRepository;
 
 	private static final int MAX_ADMINS = 50;
 
@@ -89,7 +91,13 @@ public class AdminServiceImpl implements AdminService {
 	    if (isSpecialUsername(admin.getUsername())) {
 	        throw new RuntimeException("Non puoi eliminare questo admin!");
 	    }
+		// Controlla se è assegnato a un Work come operator1/2/3 o manager
+		boolean isAssigned = workRepository.existsByOperatorOrOperator2OrOperator3OrManager(admin, admin,
+				admin, admin);
 
+		if (isAssigned) {
+			throw new RuntimeException("Impossibile eliminare admin, é presente nei dati storici. Puoi renderlo inattivo.");
+		}
 	    userRepository.deleteById(id);
 	}
 	
