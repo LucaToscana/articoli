@@ -48,6 +48,12 @@ public class StatisticsDto {
     private BigDecimal totaleMontaggio;       
     private BigDecimal totaleScatolatura;     
 
+    //  Nuove lavorazioni aggiunte
+    private BigDecimal totaleStaccare;        
+    private BigDecimal totaleLavare;          
+    private BigDecimal totaleAnnerire;        
+    private BigDecimal totaleSatinare;        
+
     // --- Indicatori di efficienza ---
     private BigDecimal produttivitaOraria;    
     private BigDecimal mediaOrdiniOra;        

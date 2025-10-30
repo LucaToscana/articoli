@@ -49,6 +49,22 @@ public class OrdineRisultatoDto {
     private BigDecimal scatolaturaReale;
     private BigDecimal scatolaturaFatturabile;
 
+    // STACCARE
+    private BigDecimal staccareReale;
+    private BigDecimal staccareFatturabile;
+
+    // LAVARE
+    private BigDecimal lavareReale;
+    private BigDecimal lavareFatturabile;
+
+    // ANNERIRE
+    private BigDecimal annerireReale;
+    private BigDecimal annerireFatturabile;
+
+    // SATINARE
+    private BigDecimal satinareReale;
+    private BigDecimal satinareFatturabile;
+
     private LocalDateTime dataRisultato;
     private BigDecimal prezzo;
     private BigDecimal quantita;
@@ -88,11 +104,24 @@ public class OrdineRisultatoDto {
         this.scatolaturaReale = r.getScatolaturaReale();
         this.scatolaturaFatturabile = r.getScatolaturaFatturabile();
 
+        // ✅ Nuove lavorazioni
+        this.staccareReale = r.getStaccareReale();
+        this.staccareFatturabile = r.getStaccareFatturabile();
+
+        this.lavareReale = r.getLavareReale();
+        this.lavareFatturabile = r.getLavareFatturabile();
+
+        this.annerireReale = r.getAnnerireReale();
+        this.annerireFatturabile = r.getAnnerireFatturabile();
+
+        this.satinareReale = r.getSatinareReale();
+        this.satinareFatturabile = r.getSatinareFatturabile();
+
         this.dataRisultato = r.getDataRisultato();
         this.prezzo = r.getPrezzo();
         this.quantita = r.getQuantita();
 
-        // 🔹 Parametri di calcolo in camelCase
+        // 🔹 Parametri di calcolo
         this.prezzoOrarioFisso = r.getPREZZO_ORARIO_FISSO();
         this.prezzoEffettivo = r.getPREZZO_EFFETTIVO();
         this.costoOrarioFisso = r.getCOSTO_ORARIO_FISSO();

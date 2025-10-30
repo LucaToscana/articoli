@@ -1,5 +1,5 @@
 package com.gestione.articoli.model;
 
 public enum WorkPositionType {
-	SOPRA, SOTTO, INTORNO, TESTIMONE
+	SOPRA, SOTTO, INTORNO, TESTIMONE, COMPLETO, DENTRO
 }

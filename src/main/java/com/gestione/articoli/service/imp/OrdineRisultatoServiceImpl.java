@@ -97,6 +97,16 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 			dto.setMontaggioFatturabile(r.getMontaggioFatturabile());
 			dto.setScatolaturaReale(r.getScatolaturaReale());
 			dto.setScatolaturaFatturabile(r.getScatolaturaFatturabile());
+			
+			dto.setStaccareReale(r.getStaccareReale());
+			dto.setStaccareFatturabile(r.getStaccareFatturabile());
+			dto.setLavareReale(r.getLavareReale());
+			dto.setLavareFatturabile(r.getLavareFatturabile());
+			dto.setAnnerireReale(r.getAnnerireReale());
+			dto.setAnnerireFatturabile(r.getAnnerireFatturabile());
+			dto.setSatinareReale(r.getSatinareReale());
+			dto.setSatinareFatturabile(r.getSatinareFatturabile());
+			
 			dto.setDataRisultato(r.getDataRisultato());
 			//dto.setPrezzo(r.getPrezzo());
 			dto.setQuantita(r.getQuantita());
@@ -212,6 +222,22 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 				case "SCATOLATURA" -> {
 					risultato.setScatolaturaReale(risultato.getScatolaturaReale().add(durataReale));
 					risultato.setScatolaturaFatturabile(risultato.getScatolaturaFatturabile().add(durataFatturabile));
+				}
+				case "STACCARE" -> {
+				    risultato.setStaccareReale(risultato.getStaccareReale().add(durataReale));
+				    risultato.setStaccareFatturabile(risultato.getStaccareFatturabile().add(durataFatturabile));
+				}
+				case "LAVARE" -> {
+				    risultato.setLavareReale(risultato.getLavareReale().add(durataReale));
+				    risultato.setLavareFatturabile(risultato.getLavareFatturabile().add(durataFatturabile));
+				}
+				case "ANNERIRE" -> {
+				    risultato.setAnnerireReale(risultato.getAnnerireReale().add(durataReale));
+				    risultato.setAnnerireFatturabile(risultato.getAnnerireFatturabile().add(durataFatturabile));
+				}
+				case "SATINARE" -> {
+				    risultato.setSatinareReale(risultato.getSatinareReale().add(durataReale));
+				    risultato.setSatinareFatturabile(risultato.getSatinareFatturabile().add(durataFatturabile));
 				}
 				default -> {
 					/* ignora altre attività */ }

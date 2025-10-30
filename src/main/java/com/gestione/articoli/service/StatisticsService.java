@@ -138,6 +138,14 @@ public class StatisticsService {
         dto.setOrdineId(ordine.getId());
         dto.setWorkStatus(ordine.getWorkStatus());
         dto.setDataOrdine(ordine.getDataOrdine());
+        dto.setStaccareReale(r.getStaccareReale());
+        dto.setStaccareFatturabile(r.getStaccareFatturabile());
+        dto.setLavareReale(r.getLavareReale());
+        dto.setLavareFatturabile(r.getLavareFatturabile());
+        dto.setAnnerireReale(r.getAnnerireReale());
+        dto.setAnnerireFatturabile(r.getAnnerireFatturabile());
+        dto.setSatinareReale(r.getSatinareReale());
+        dto.setSatinareFatturabile(r.getSatinareFatturabile());
         dto.setAziendaNome(ordine.getAzienda() != null ? ordine.getAzienda().getNome() : null);
 
         String codice = articolo.getCodice();
@@ -170,6 +178,8 @@ public class StatisticsService {
         BigDecimal totaleCosti = BigDecimal.ZERO;
         BigDecimal costoPersonale = BigDecimal.ZERO;
         BigDecimal costoFisso = BigDecimal.ZERO;
+
+        // lavorazioni esistenti
         BigDecimal molatura = BigDecimal.ZERO;
         BigDecimal lucidatura = BigDecimal.ZERO;
         BigDecimal saldatura = BigDecimal.ZERO;
@@ -177,7 +187,14 @@ public class StatisticsService {
         BigDecimal filettatura = BigDecimal.ZERO;
         BigDecimal montaggio = BigDecimal.ZERO;
         BigDecimal scatolatura = BigDecimal.ZERO;
+
+        // nuove lavorazioni
+        BigDecimal staccare = BigDecimal.ZERO;
+        BigDecimal lavare = BigDecimal.ZERO;
+        BigDecimal annerire = BigDecimal.ZERO;
+        BigDecimal satinare = BigDecimal.ZERO;
     }
+
 
     private static class KPI {
         BigDecimal utileNetto;
@@ -210,7 +227,11 @@ public class StatisticsService {
                     .add(r.getForaturaFatturabile())
                     .add(r.getFilettaturaFatturabile())
                     .add(r.getMontaggioFatturabile())
-                    .add(r.getScatolaturaFatturabile());
+                    .add(r.getScatolaturaFatturabile())
+                    .add(r.getStaccareFatturabile())
+                    .add(r.getLavareFatturabile())
+                    .add(r.getAnnerireFatturabile())
+                    .add(r.getSatinareFatturabile());
 
             acc.totaleMinuti = acc.totaleMinuti.add(minuti);
             acc.totaleOre = acc.totaleOre.add(minuti.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
@@ -222,7 +243,11 @@ public class StatisticsService {
             acc.filettatura = acc.filettatura.add(r.getFilettaturaFatturabile());
             acc.montaggio = acc.montaggio.add(r.getMontaggioFatturabile());
             acc.scatolatura = acc.scatolatura.add(r.getScatolaturaFatturabile());
-
+            acc.staccare = acc.staccare.add(r.getStaccareFatturabile());
+            acc.lavare = acc.lavare.add(r.getLavareFatturabile());
+            acc.annerire = acc.annerire.add(r.getAnnerireFatturabile());
+            acc.satinare = acc.satinare.add(r.getSatinareFatturabile());
+            
             BigDecimal ricavoNetto = oa.getPrezzo().multiply(r.getQuantita());
             acc.totaleRicavoNetto = acc.totaleRicavoNetto.add(ricavoNetto);
 
@@ -320,6 +345,10 @@ public class StatisticsService {
                 .totaleFilettatura(acc.filettatura)
                 .totaleMontaggio(acc.montaggio)
                 .totaleScatolatura(acc.scatolatura)
+                .totaleStaccare(acc.staccare)
+                .totaleLavare(acc.lavare)
+                .totaleAnnerire(acc.annerire)
+                .totaleSatinare(acc.satinare)
                 .build();
     }
 }

@@ -30,6 +30,15 @@ public class OrdineRisultatoMapper {
 	            .scatolaturaReale(entity.getScatolaturaReale())
 	            .scatolaturaFatturabile(entity.getScatolaturaFatturabile())
 
+	            .staccareReale(entity.getStaccareReale())
+	            .staccareFatturabile(entity.getStaccareFatturabile())
+	            .lavareReale(entity.getLavareReale())
+	            .lavareFatturabile(entity.getLavareFatturabile())
+	            .annerireReale(entity.getAnnerireReale())
+	            .annerireFatturabile(entity.getAnnerireFatturabile())
+	            .satinareReale(entity.getSatinareReale())
+	            .satinareFatturabile(entity.getSatinareFatturabile())
+
 	            .dataRisultato(entity.getDataRisultato())
 	            .prezzo(entity.getPrezzo())
 	            .quantita(entity.getQuantita() != null ? entity.getQuantita() : BigDecimal.ZERO)
@@ -42,6 +51,7 @@ public class OrdineRisultatoMapper {
 	            .ricaricoBase(entity.getRICARICO_BASE())
 	            .build();
 	}
+
 
 	public static OrdineRisultato toEntity(OrdineRisultatoDto dto) {
 	    LocalDateTime dataRisultato = dto.getDataRisultato() != null
@@ -63,6 +73,15 @@ public class OrdineRisultatoMapper {
 	            .montaggioFatturabile(dto.getMontaggioFatturabile())
 	            .scatolaturaReale(dto.getScatolaturaReale())
 	            .scatolaturaFatturabile(dto.getScatolaturaFatturabile())
+
+	            .staccareReale(dto.getStaccareReale())
+	            .staccareFatturabile(dto.getStaccareFatturabile())
+	            .lavareReale(dto.getLavareReale())
+	            .lavareFatturabile(dto.getLavareFatturabile())
+	            .annerireReale(dto.getAnnerireReale())
+	            .annerireFatturabile(dto.getAnnerireFatturabile())
+	            .satinareReale(dto.getSatinareReale())
+	            .satinareFatturabile(dto.getSatinareFatturabile())
 
 	            .dataRisultato(dataRisultato)
 	            .prezzo(dto.getPrezzo())

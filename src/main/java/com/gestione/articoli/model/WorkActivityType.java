@@ -9,8 +9,11 @@ public enum WorkActivityType {
     FORATURA("Foratura"),
     FILETTATURA("Filettatura"),
     MONTAGGIO("Montaggio"),
-    SCATOLATURA("Scatolatura");
-
+    SCATOLATURA("Scatolatura"),
+    STACCARE("Staccare"),
+    LAVARE("Lavare"),
+    ANNERIRE("Annerire"),
+    SATINARE("Satinare");
     private final String label;
 
     WorkActivityType(String label) {

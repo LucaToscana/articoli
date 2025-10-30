@@ -28,10 +28,19 @@ public class DataInitializer implements CommandLineRunner {
         // ----------------------------
         // 1️ Creazione lavorazioni base se non esistono
         // ----------------------------
-        String[] lavorazioniBase = {
-            "Molatura", "Lucidatura", "Saldatura", "Foratura", "Filettatura", "Montaggio", "Scatolatura"
-        };
-
+		String[] lavorazioniBase = {
+			    "Molatura",
+			    "Lucidatura",
+			    "Saldatura",
+			    "Foratura",
+			    "Filettatura",
+			    "Montaggio",
+			    "Scatolatura",
+			    "Staccare",
+			    "Lavare",
+			    "Annerire",
+			    "Satinare"
+			};
         for (String nome : lavorazioniBase) {
             if (lavorazioneRepository.findByNome(nome).isEmpty()) {
                 Lavorazione lav = new Lavorazione();
