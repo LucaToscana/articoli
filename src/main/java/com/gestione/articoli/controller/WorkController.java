@@ -240,6 +240,14 @@ public class WorkController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Elimina un Work pianificato dall'admin.
+     */
+    @DeleteMapping("/planned/{id}")
+    public ResponseEntity<Void> deletePlanned(@PathVariable Long id) {
+        workService.deletePlannedWork(id);
+        return ResponseEntity.noContent().build();
+    }
     /* ========= ACTIONS ========= */
 
     /**
@@ -279,4 +287,25 @@ public class WorkController {
 
         return ResponseEntity.ok(steps);
     }
+    /**
+     * Duplica un lavoro pianificato aggiornando le date.
+     *
+     * @param id ID del lavoro da duplicare
+     * @return Nuovo WorkDto duplicato
+     */
+    @PostMapping("/planned/{id}/duplicate")
+    public ResponseEntity<WorkDto> duplicatePlannedWork(@PathVariable Long id) {
+        WorkDto duplicated = workService.duplicatePlannedWork(id);
+        return ResponseEntity.ok(duplicated);
+    }
+    
+    @PutMapping("/planned/{id}")
+    public ResponseEntity<WorkDto> updatePlannedWork(
+            @PathVariable Long id,
+            @RequestBody WorkDto dto
+    ) {
+        WorkDto updated = workService.updatePlannedWork(id, dto);
+        return ResponseEntity.ok(updated);
+    }
+
 }

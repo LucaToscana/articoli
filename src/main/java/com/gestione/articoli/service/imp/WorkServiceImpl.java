@@ -16,6 +16,7 @@ import com.gestione.articoli.service.WorkService;
 import com.gestione.articoli.service.WorkValidationService;
 import com.gestione.articoli.utils.WorkUtils;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.jpa.repository.Modifying;
@@ -247,7 +248,7 @@ public class WorkServiceImpl implements WorkService {
 	}
 
 	/**
-	 * Cancella un Work.
+	 * Cancella un Work manuale , cancella anche quallia associati , non usare per altri work.
 	 *
 	 * @param id ID del Work
 	 */
@@ -908,7 +909,12 @@ public class WorkServiceImpl implements WorkService {
 	        }
 	    }
 	}
-
+	@Override
+	public void deletePlannedWork(Long id) {
+		if (!workRepository.existsById(id))
+			throw new RuntimeException("Lavoro pianificato  non trovato con id " + id);
+		workRepository.deleteById(id);		
+	}
 	private BigDecimal toBigDecimal(Object obj) {
 		if (obj == null)
 			return BigDecimal.ZERO;
@@ -921,6 +927,114 @@ public class WorkServiceImpl implements WorkService {
 		} catch (Exception e) {
 			return BigDecimal.ZERO;
 		}
+	}
+
+	@Override
+	@Transactional
+	public WorkDto duplicatePlannedWork(Long id) {
+	    Work original = workRepository.findById(id)
+	        .orElseThrow(() -> new EntityNotFoundException("Work non trovato con id: " + id));
+
+	    Work duplicated = new Work();
+
+	    // 🔁 Copia campi principali
+	    duplicated.setOrderArticle(original.getOrderArticle());
+	    duplicated.setArticolo(original.getArticolo());
+	    duplicated.setActivity(original.getActivity());
+	    duplicated.setSpecifiche(original.getSpecifiche());
+	    duplicated.setGrana(original.getGrana());
+	    duplicated.setPastaColore(original.getPastaColore());
+	    duplicated.setQuantita(original.getQuantita());
+	    duplicated.setManager(original.getManager());
+
+	    if (original.getPosizioni() != null)
+	        duplicated.setPosizioni(new ArrayList<>(original.getPosizioni()));
+
+	    if (original.getOperator() != null)
+	        duplicated.setOperator(original.getOperator());
+	    if (original.getOperator2() != null)
+	        duplicated.setOperator2(original.getOperator2());
+	    if (original.getOperator3() != null)
+	        duplicated.setOperator3(original.getOperator3());
+
+	    duplicated.setStatus(WorkStatus.PAUSED);
+
+ 	    LocalDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+	    duplicated.setOriginalStartTime(now);
+	    duplicated.setStartTime(now);
+
+ 	    Work saved = workRepository.save(duplicated);
+
+	    return WorkMapper.toDto(saved);
+	}
+
+	@Override
+	public WorkDto updatePlannedWork(Long id, WorkDto dto) {
+	    Work work = workRepository.findById(id)
+	            .orElseThrow(() -> new EntityNotFoundException("Work non trovato con id: " + id));
+
+ 	    if (dto.getOrderArticleId() != null) {
+	        OrdineArticolo orderArticle = ordineArticoloRepository.findById(dto.getOrderArticleId())
+	                .orElseThrow(() -> new EntityNotFoundException(
+	                        "OrderArticle non trovato con id: " + dto.getOrderArticleId()));
+	        work.setOrderArticle(orderArticle);
+	    }
+
+ 	    if (dto.getArticolo() != null && dto.getArticolo().getId() != null) {
+	        Articolo articolo = articoloRepository.findById(dto.getArticolo().getId())
+	                .orElseThrow(() -> new EntityNotFoundException("Articolo non trovato con id: " + dto.getArticolo().getId()));
+	        work.setArticolo(articolo);
+	    }
+
+	     if (dto.getManager() != null) work.setManager(getUserSafe(dto.getManager()));
+	     work.setQuantita(dto.getQuantita());
+
+ 	    if (dto.getActivity() != null) {
+	        work.setActivity(WorkActivityType.valueOf(dto.getActivity()));
+	    }
+
+ 	    if (dto.getSpecifiche() != null) {
+	        work.setSpecifiche(WorkSpecificType.valueOf(dto.getSpecifiche()));
+	    }
+
+ 	    if (dto.getGrana() != null) {
+	        work.setGrana(GranaType.valueOf(dto.getGrana()));
+	    }
+
+ 	    if (dto.getPastaColore() != null) {
+	        work.setPastaColore(PastaColoreType.valueOf(dto.getPastaColore()));
+	    }
+
+ 	    if (dto.getPosizioni() != null) {
+	        List<WorkPositionType> posizioniEnum = dto.getPosizioni().stream()
+	                .map(WorkPositionType::valueOf)
+	                .collect(Collectors.toList());
+	        work.setPosizioni(posizioniEnum);
+	    }
+
+ 	    work.setOperator(getUserSafe(dto.getOperator()));
+	    work.setOperator2(getUserSafe(dto.getOperator2()));
+	    work.setOperator3(getUserSafe(dto.getOperator3()));
+
+ 	    if (dto.getStatus() != null) {
+	        work.setStatus(WorkStatus.PAUSED);
+	    }
+ 
+	    LocalDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Rome")).toLocalDateTime();
+	    work.setOriginalStartTime(now);
+	    work.setStartTime(now);
+ 	    
+	    Work saved = workRepository.save(work);
+	    return WorkMapper.toDto(saved);
+	}
+
+	// Metodo helper per operatori
+	private User getUserSafe(UserDto dto) {
+	    if (dto != null && dto.getId() != null) {
+	        return userRepository.findById(dto.getId())
+	                .orElseThrow(() -> new EntityNotFoundException("Operatore non trovato con id: " + dto.getId()));
+	    }
+	    return null;
 	}
 
 }

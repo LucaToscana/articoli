@@ -239,18 +239,21 @@ public class OrdineServiceImpl implements OrdineService {
 		if (dto == null) {
 			throw new RuntimeException("FastOrderDto non può essere nullo");
 		}
+		if (dto.getArticolo() == null) {
+			throw new RuntimeException("FastOrderDto non può essere nullo");
+		}
+		if (dto.getOrdine() == null) {
+			throw new RuntimeException("FastOrderDto non può essere nullo");
+		}
 		ArticoloDto articoloDto = dto.getArticolo();
 		Articolo savedArticoloEntity = new Articolo();
 		if (dto.getArticolo() != null && dto.getArticolo().getId() != null && dto.isFromArticle()) {
-			savedArticoloEntity = articoloRepository.findById(dto.getArticolo().getId()).orElse(new Articolo()); // oppure
-																													// //
-																													// lanci//
-																													// un'eccezione
+			savedArticoloEntity = articoloRepository.findById(dto.getArticolo().getId()).orElse(new Articolo()); // oppure																											// lanci//																												// un'eccezione
 		} else {
-			// 1️⃣ Salva articolo tramite servizio e ottieni l'entity
+			//  Salva articolo tramite servizio e ottieni l'entity
 			// imposta visibilità e quantità
 			articoloDto.setAttivoPerProduzione(true);
-			articoloDto.setDescrizione(dto.getOrdine().getNomeDocumento());
+			articoloDto.setDescrizione(dto.getArticolo().getDescrizione());
 			// Questo metodo deve ritornare l'entity salvata
 			savedArticoloEntity = articoloService.saveAndGetEntity(articoloDto);
 		}

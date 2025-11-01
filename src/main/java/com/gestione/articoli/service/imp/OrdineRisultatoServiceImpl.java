@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 
-	private final OrdineRisultatoRepository repository;
+	private final OrdineRisultatoRepository risultatiRepository;
 	private final OrdineService ordineService;
 	private final WorkService workService;
 	private final OrdineRepository ordineRepository;
@@ -47,13 +47,13 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 	@Override
 	public OrdineRisultatoDto save(OrdineRisultatoDto dto) {
 		OrdineRisultato entity = OrdineRisultatoMapper.toEntity(dto);
-		entity = repository.save(entity);
+		entity = risultatiRepository.save(entity);
 		return OrdineRisultatoMapper.toDto(entity);
 	}
 
 	@Override
 	public OrdineRisultatoDto getById(Long id) {
-		return repository.findById(id).map(OrdineRisultatoMapper::toDto).orElse(null);
+		return risultatiRepository.findById(id).map(OrdineRisultatoMapper::toDto).orElse(null);
 	}
 
 	@Override
@@ -62,18 +62,18 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 		Ordine ordine = ordineRepository.findById(ordineId).orElseThrow(
 				() -> new EntityNotFoundException("Ordine non trovato: " + ordineId));
 		ordine.setNumeroFattura(null);
-        repository.deleteByOrdineId(ordineId);
+        risultatiRepository.deleteByOrdineId(ordineId);
 	}
 
 	@Override
 	public List<OrdineRisultatoDto> getAll() {
-		return repository.findAll().stream().map(OrdineRisultatoMapper::toDto).collect(Collectors.toList());
+		return risultatiRepository.findAll().stream().map(OrdineRisultatoMapper::toDto).collect(Collectors.toList());
 	}
 
 	@Override
 	@Transactional
 	public List<OrdineRisultatoDto> getByOrdineId(Long ordineId) {
-		return repository.findByOrdineIdWithJoin(ordineId).stream().map(r -> {
+		return risultatiRepository.findByOrdineIdWithJoin(ordineId).stream().map(r -> {
 			OrdineRisultatoDto dto = new OrdineRisultatoDto();
 			dto.setRicaricoBase(r.getRICARICO_BASE());
 			dto.setCostoOrarioFisso(r.getCOSTO_ORARIO_FISSO());
@@ -134,7 +134,7 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 	@Transactional
 	@Override
 	public void delete(Long id) {
-		repository.deleteById(id);
+		risultatiRepository.deleteById(id);
 	}
 
 	@Transactional
@@ -145,7 +145,7 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 				.orElseThrow(() -> new EntityNotFoundException("Ordine non trovato con id: " + ordineId));
 
 		// 🔹 2. Elimina eventuali risultati precedenti per questo ordine
-		repository.deleteByOrdineId(ordineId);
+		risultatiRepository.deleteByOrdineId(ordineId);
 
 		// 🔹 3. Recupera tutti i lavori manuali con totalMinutes
 		List<WorkDto> works = workService.getManualWorksWithTotalMinutesByOrder(ordineId);
@@ -169,6 +169,7 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 			Articolo articolo = articoloRepository.findById(ordineArticolo.getArticoloId()).orElseThrow(
 					() -> new EntityNotFoundException("Articolo non trovato: " + ordineArticolo.getArticoloId()));
 		    BigDecimal totaleMinutiRealiArticolo = BigDecimal.ZERO;
+		    BigDecimal totaleMinutiFatturabiliArticolo = BigDecimal.ZERO;
 
 			OrdineRisultato risultato = OrdineRisultato.createEmpty(ordine, articolo,
 					parametriCalcoloDto.getPrezzoOrarioFisso());
@@ -193,7 +194,7 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 					operatorCount = 1;
 
 				BigDecimal durataFatturabile = durataReale.multiply(BigDecimal.valueOf(operatorCount));
-
+				totaleMinutiFatturabiliArticolo = totaleMinutiFatturabiliArticolo.add(durataFatturabile);
 				switch (w.getActivity()) {
 				case "MOLATURA" -> {
 					risultato.setMolaturaReale(risultato.getMolaturaReale().add(durataReale));
@@ -256,10 +257,10 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 				    .orElseThrow(() -> new EntityNotFoundException("OrdineArticolo non trovato con id: " + ordineArticoloId));
 
 				// Imposta totale minuti
-				articoloOrdine.setTotaleMinutiLavorazioni(totaleMinutiRealiArticolo);
+				articoloOrdine.setTotaleMinutiLavorazioni(totaleMinutiFatturabiliArticolo);
 
 				// Calcolo: (totaleMinutiRealiArticolo / 60) * prezzoOrarioFisso / quantita
-				BigDecimal minutiInOre = totaleMinutiRealiArticolo
+				BigDecimal minutiInOre = totaleMinutiFatturabiliArticolo
 				    .divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
 
 				BigDecimal prezzoOrarioFisso = parametriCalcoloDto.getPrezzoOrarioFisso() != null
@@ -283,8 +284,8 @@ public class OrdineRisultatoServiceImpl implements OrdineRisultatoService {
 
 			ordineArticoloRepository.save(articoloOrdine);
 		}
-		// 🔹 9. Salva tutti i risultati nel repository
-		List<OrdineRisultato> risultatiSalvati = repository.saveAll(risultati);
+		// 🔹 9. Salva tutti i risultati nel risultatiRepository
+		List<OrdineRisultato> risultatiSalvati = risultatiRepository.saveAll(risultati);
 		articoliOrdine = ordineArticoloService.getAllOrdineArticoliByOrdineId(ordineId);
 		// 🔹 10. Aggiorna i prezzi unitari degli articoli nell’ordine
 		List<OrdineArticoloPrezzoDto> prezziDtoList = articoliOrdine.stream()

@@ -30,6 +30,7 @@ public interface WorkService {
     List<WorkDto> getInProgressManualWorks();
     List<WorkDto> getInProgressLottoWorks();
 	List<WorkDto> getInProgressLottoWorksWithOrderInProgress();
+	List<WorkDto> getInProgressManualWorksCreatedByAdmin();
 	List<WorkDto> getLottoWorks();
 
 	List<WorkDto> getStepsByWork(Long id);
@@ -41,16 +42,18 @@ public interface WorkService {
     /* ========= UPDATE ========= */
     WorkDto updateWork(Long id, WorkDto dto);
 	WorkDto updateLottoWork(Long id, WorkDto dto);
-	
+	WorkDto updatePlannedWork(Long id, WorkDto dto); 
+
     /* ========= TRANSITIONS / ACTIONS ========= */
     WorkDto closeWork(Long id, WorkStatus status);
     WorkDto transitionWork(Long workId, WorkStatus newStatus);
-    
+	WorkDto duplicatePlannedWork(Long id);
     /* ========= DELETE ========= */
     void deleteWork(Long id);
 	void deleteLottoWork(Long id);
 	void cleanCompletedOrderWorks(Long orderId);
-	List<WorkDto> getInProgressManualWorksCreatedByAdmin();
+	void deletePlannedWork(Long id);
+
 
 }
 
